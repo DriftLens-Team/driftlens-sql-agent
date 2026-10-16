@@ -1,5 +1,8 @@
 # DriftLens SQL agent example
 
+A minimal SQL agent example for generating and evaluating logs with the DriftLens benchmark.
+
+
 Python 3.11+ bounded agent loop: model chooses a JSON query action, the application
 executes read-only SQLite, supplies the result, and the model chooses its answer.
 This example consumes public DriftLens L3 logs and replays their SQL observations;
