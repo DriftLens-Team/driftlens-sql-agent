@@ -1,11 +1,10 @@
-# 구조 설계와 구현 상태
-이번 추가는 문서·메타데이터 예시·한국어 주석 전용 Python 파일이다. 실행 가능한 신규 기능은 없다. 기존 코드 이동, import 해소, 테스트 변경은 하지 않았다.
-Library 설계 파일 driftlens-structure-proposal.md (libfile_c93b37f12e788191b995c365203dc846)는 현재 Windows 환경에서 공식 materialize 도우미의 os.setxattr 미지원으로 생성되지 않아 전체를 읽지 못했다. 사용자 승인 요약과 다음 Notion 자료, 현재 저장소 코드를 근거로 작성했다.
-- [로그 스키마 결정](https://app.notion.com/p/3fbd6107e54781c890c8caa0548cdb4b)
-- [생성기 이력](https://app.notion.com/p/3fbd6107e547815bbd4ed311134f1079)
-Notion의 인라인 코드는 과거 이력이며 현재 실행 방법은 기존 루트 README를 따른다.
+# 아키텍처와 구현 상태
 
-현재 agent.py는 공개 benchmark 로그의 SQL을 replay하며 benchmark의 driftlens·public_logs·sql_tool을 import한다. 기존 test_agent.py와 실행 방식은 그대로다. 향후 engine 공통 엔진이 질문을 처리하고 업무 정의·DB·스키마·단위·모델 설정을 읽도록 분리할 예정이다. 이번에는 의존성 제거 또는 독립 text-to-SQL 구현을 하지 않았다.
+[English overview](../README.md) | [한국어 개요](../README.ko.md)
+
+이 문서는 현재 실행 경로와 계획된 구성요소의 책임, 정보 경계, 버전 기록을 설명한다. 설정 예시와 주석 전용 Python 파일은 설계 안내이며 실행 기능을 제공하지 않는다. 실제 사용 방법은 저장소 루트 README를 따른다.
+
+현재 agent.py는 공개 benchmark 로그의 SQL을 replay하며 benchmark의 driftlens·public_logs·sql_tool을 import한다. test_agent.py는 현재 replay 동작을 검증한다. 향후 engine 공통 엔진이 질문을 처리하고 업무 정의·DB·스키마·단위·모델 설정을 읽도록 분리할 예정이다. 의존성 제거와 독립 text-to-SQL은 아직 구현되지 않았다.
 
 | 경로 | 역할 |
 | --- | --- |
