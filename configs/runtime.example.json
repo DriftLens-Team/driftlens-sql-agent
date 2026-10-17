@@ -1,0 +1,20 @@
+{
+  "database": {
+    "kind": "sqlite",
+    "path": "../driftlens-benchmark/runs/demo/orders.sqlite",
+    "read_only": true
+  },
+  "schema_mapping": {
+    "table": "orders",
+    "order_id": "order_id",
+    "ordered_at": "ordered_at",
+    "amount": "order_total_cents"
+  },
+  "amount_unit": "integer_cents",
+  "model": {
+    "provider": "upstage",
+    "id_env": "UPSTAGE_MODEL",
+    "api_key_env": "UPSTAGE_API_KEY"
+  },
+  "max_turns": 5
+}

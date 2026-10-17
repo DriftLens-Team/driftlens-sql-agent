@@ -1,0 +1,6 @@
+{
+  "concept_id": "large_orders",
+  "comparison": ">=",
+  "threshold": 2000,
+  "amount_unit": "integer_cents"
+}
