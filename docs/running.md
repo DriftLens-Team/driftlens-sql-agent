@@ -1,5 +1,7 @@
 # JSONL 실행 안내
 
+VS Code에서 F5로 실제 CLI를 실행하려면 [디버깅 설정 안내](debugging.md)를 따릅니다.
+
 Python 3.11 이상에서 `python -m pip install -e .`로 설치합니다. config의 DB 경로를 실제 불변 SQLite 스냅샷 위치로 수정하고 profile 하나를 선택합니다. DB 경로는 config 파일 기준입니다.
 
 ```powershell
