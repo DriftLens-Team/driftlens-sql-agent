@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib.resources import files
 import json
 import threading
 import time
@@ -65,10 +66,14 @@ class HttpTests(DatabaseCase):
     def test_http_success_and_generation_settings(self):
         """실제 HTTP 요청의 생성 옵션과 응답 해석을 확인한다."""
         self.response()
-        action = self.model.generate([{"role": "user", "content": "질문"}], timeout=2, max_bytes=65536)
+        # Upstage JSON 모드는 메시지에 JSON 지시가 없으면 실제 서버에서 400을 반환한다.
+        prompt = files("driftlens_sql_agent").joinpath("prompts/system.txt").read_text(encoding="utf-8")
+        action = self.model.generate([{"role": "system", "content": prompt}], timeout=2, max_bytes=65536)
         self.assertEqual(json.loads(action), QUERY)
         self.assertEqual(self.received[0]["temperature"], 0)
         self.assertFalse(self.received[0]["stream"])
+        self.assertEqual(self.received[0]["response_format"], {"type": "json_object"})
+        self.assertIn("json", self.received[0]["messages"][0]["content"].lower())
         self.assertNotIn("SECRET", repr(self.model))
 
     def test_http_classification(self):
