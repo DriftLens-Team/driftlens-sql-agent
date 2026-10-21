@@ -1,25 +1,20 @@
-"""Model boundary and deterministic offline double; no live provider yet."""
+"""모델 호출을 별도 프로세스에 격리하고 응답 action을 검증한다."""
 
 import json
 import math
-import multiprocessing
 import os
 import sys
-import time
-from typing import Protocol
 
 from .errors import AgentError, ModelError
-from .validation import action_value
-
-
-class Model(Protocol):
-    def generate(self, messages: list[dict], *, timeout: float, max_bytes: int): ...
+from .schemas import strict_json
 
 
 class FakeModel:
     """Only three declared test questions; not a language-understanding model."""
 
     def generate(self, messages, *, timeout, max_bytes):
+        """모델 교체 인터페이스: worker가 지정한 입력과 제한으로 다음 action을 반환한다."""
+        # 오프라인 fixture 전용이다. 세 문장의 성공을 실제 언어 이해 품질로 간주하지 않는다.
         context = json.loads(messages[1]["content"])
         if context["question"] not in {
             "이번 주 대형 주문은 몇 건인가요?", "해당 주의 대형 주문 수를 알려주세요.",
@@ -38,13 +33,32 @@ class FakeModel:
 
 def _worker(connection, model):
     # Provider libraries must not write into the host's future JSONL stream.
+    """spawn 프로세스 진입점: 모델 호출과 action 검사를 격리하고 안전한 결과만 보낸다."""
     sys.stdout = open(os.devnull, "w")
     sys.stderr = open(os.devnull, "w")
     try:
         while True:
             messages, timeout = connection.recv()
             try:
-                action = action_value(model.generate(messages, timeout=timeout, max_bytes=65536))
+                value = model.generate(messages, timeout=timeout, max_bytes=65536)
+                # provider 문자열과 fake dict에 동일한 크기·키·타입 규칙을 적용한다.
+                try:
+                    text = value if type(value) is str else json.dumps(value, ensure_ascii=False, allow_nan=False)
+                    if len(text.encode("utf-8")) > 65536:
+                        raise ValueError
+                    action = strict_json(text)
+                    if type(action) is not dict:
+                        raise ValueError
+                    kind = action.get("action")
+                    expected = {"query": {"action", "sql"}, "answer": {"action", "answer_text"},
+                                "unsupported": {"action"}}
+                    if type(kind) is not str or kind not in expected or set(action) != expected[kind]:
+                        raise ValueError
+                    if kind != "unsupported" and type(action["sql" if kind == "query" else "answer_text"]) is not str:
+                        raise ValueError
+
+                except (ValueError, TypeError, OverflowError, RecursionError):
+                    raise AgentError("invalid_action") from None
                 payload = {"action": action}
             except ModelError as error:
                 delay = error.retry_after
@@ -60,55 +74,3 @@ def _worker(connection, model):
         pass
     finally:
         connection.close()
-
-
-class ModelSession:
-    """One isolated model instance per request; timeout terminates its worker."""
-
-    def __init__(self, model: Model):
-        self.model = model
-        self.process = None
-        self.connection = None
-
-    def close(self):
-        if self.connection is not None:
-            self.connection.close()
-            self.connection = None
-        if self.process is not None:
-            if self.process.is_alive():
-                self.process.terminate()
-            self.process.join(timeout=0.5)
-            if self.process.is_alive():
-                self.process.kill()
-                self.process.join(timeout=0.5)
-            self.process.close()
-            self.process = None
-
-    def call(self, messages, *, timeout):
-        expires = time.monotonic() + timeout
-        if self.process is None:
-            context = multiprocessing.get_context("spawn")
-            self.connection, child = context.Pipe()
-            self.process = context.Process(target=_worker, args=(child, self.model), daemon=True)
-            self.process.start()
-            child.close()
-        try:
-            self.connection.send((messages, max(0, expires - time.monotonic())))
-            if not self.connection.poll(max(0, expires - time.monotonic())):
-                self.close()
-                raise ModelError("model_timeout", transient=True)
-            result = json.loads(self.connection.recv_bytes(maxlength=70000))
-        except (EOFError, OSError):
-            self.close()
-            raise RuntimeError("Model worker failed") from None
-        if time.monotonic() >= expires:
-            self.close()
-            raise ModelError("model_timeout", transient=True)
-        if result.get("internal_error"):
-            raise RuntimeError("Model worker failed")
-        if "error" in result:
-            if result["error"].startswith("model_"):
-                raise ModelError(result["error"], transient=result.get("transient", False),
-                                 retry_after=result.get("retry_after", 0))
-            raise AgentError(result["error"])
-        return result["action"]

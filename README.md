@@ -39,3 +39,5 @@ Phase 5 evaluates the live model before release review. The actual benchmark ada
 ## License
 
 [Apache-2.0](LICENSE).
+
+Live evaluation on 2026-10-22 with solar-pro4-260806 passed the fixed gate: supported 36/36, unsupported refusals 24/24, detected violations 0. Explicit numeric cent conflicts are rejected before model execution; this is not a guarantee for all natural-language expressions. See [evaluation](evaluation/README.md) and [verification](docs/verification.md).

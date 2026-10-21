@@ -13,6 +13,7 @@ from .transport import serve
 
 
 def main(argv: list[str] | None = None) -> int:
+    """실행 진입점: 인자를 검증하고 실행 결과를 프로세스 종료 코드로 전달한다."""
     parser = argparse.ArgumentParser(
         prog="driftlens-sql-agent",
         description="DriftLens SQL agent: bounded read-only SQL over UTF-8 JSONL.",
@@ -27,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     def diagnostic(event):
+        """진단 콜백: 응답 스트림과 분리된 stderr에 허용된 메타데이터만 쓴다."""
         sys.stderr.write(json.dumps(event, ensure_ascii=True) + "\n")
         sys.stderr.flush()
 

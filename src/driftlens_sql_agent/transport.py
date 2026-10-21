@@ -10,10 +10,12 @@ MAX_LINE = 65536
 
 
 def error_response(request_id, code):
+    """프로토콜 오류 세 경로에서 동일한 응답 형식을 사용한다."""
     return {"request_id": request_id, "status": "error", "error": AgentError(code).record()}
 
 
 def write_response(stream, response):
+    """한 응답의 UTF-8 바이트 수와 완전한 쓰기를 확인한 뒤 즉시 flush한다."""
     data = json.dumps(response, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
     if len(data) > MAX_LINE:
         raise RuntimeError("Output exceeds protocol limit")
@@ -24,6 +26,7 @@ def write_response(stream, response):
 
 
 def serve(runtime, input_stream, output_stream, diagnostic):
+    """입력 프레이밍과 ID 중복을 검사하고 요청을 순서대로 실행한다."""
     seen = set()
     try:
         while True:
