@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "SQL agent - 실제 CLI (Upstage)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "driftlens_sql_agent",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "windows": {"python": "${workspaceFolder}/.venv/Scripts/python.exe"},
+      "preLaunchTask": "Prepare local debug data",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--config", "${workspaceFolder}/runs/local-debug/runtime.json",
+        "--profile", "${workspaceFolder}/profiles/v1/profile.example.json",
+        "--protocol-version", "v1"
+      ],
+      "console": "integratedTerminal",
+      "subProcess": true,
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env",
+      "env": {"PYTHONUTF8": "1"}
+    }
+  ]
+}
