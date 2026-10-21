@@ -7,9 +7,9 @@
 | settings.py | config·단일 profile·고정 매핑·예산 검증, config 상대 DB 경로 |
 | schemas.py | 중복 키·비유한 수 거부, 요청 ID·ISO 주·주말 timestamp 검증 |
 | sql_access.py | 읽기 전용 SQLite, 권한 검사, 시간·VM·길이·행 수 제한 |
-| models.py | 모델 인터페이스, fake 모델, 요청별 별도 프로세스와 호출 시간 제한 |
-| runtime.py | 상태·호출·재시도·복구 예산, 관측값 무효화, 응답과 진단 |
-| validation.py / errors.py | action·단일 정수 결과·답변 검사, 고정 오류 메시지 |
+| models.py | fake 모델, 자식 프로세스 진입점과 action 검사 |
+| runtime.py | 요청별 프로세스·시간 제한·재시도·복구 예산, 관측값 무효화, 응답과 진단 |
+| validation.py / errors.py | 단일 정수 결과·답변 검사, 고정 오류 메시지 |
 | prompts/system.txt | 모델에 전달할 스키마·정의·주간 범위·행동 규칙 |
 | provider.py | Upstage HTTP, 응답 크기 제한, 오류 분류, redirect 차단 |
 | transport.py | JSONL 바이트·ID·요청 수·flush·종료 코드 |

@@ -21,21 +21,8 @@ GENERATION = {"temperature": 0, "max_tokens": 1024, "stream": False,
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """urllib 콜백: 인증 헤더가 다른 주소로 전달되지 않도록 리다이렉트를 거부한다."""
         return None
-
-
-def retry_delay(value):
-    if value is None:
-        return 0
-    try:
-        delay = float(value)
-    except ValueError:
-        try:
-            stamp = parsedate_to_datetime(value)
-            delay = (stamp - datetime.now(timezone.utc)).total_seconds()
-        except (ValueError, TypeError, OverflowError):
-            return 2
-    return max(0, delay) if math.isfinite(delay) else 2
 
 
 @dataclass(frozen=True)
@@ -46,6 +33,7 @@ class UpstageModel:
     endpoint: str = ENDPOINT
 
     def generate(self, messages, *, timeout, max_bytes):
+        """모델 교체 인터페이스: worker가 지정한 입력과 제한으로 다음 action을 반환한다."""
         payload = json.dumps({"model": self.model_id, "messages": messages, **GENERATION},
                              ensure_ascii=False).encode("utf-8")
         request = urllib.request.Request(self.endpoint, data=payload, headers={
@@ -58,7 +46,19 @@ class UpstageModel:
                 raw = response.read(max_bytes + 1)
         except urllib.error.HTTPError as error:
             status = error.code
-            delay = retry_delay(error.headers.get("Retry-After"))
+            # 단 한 곳에서 쓰는 Retry-After 해석은 HTTP 오류 처리 안에서 수행한다.
+            value = error.headers.get("Retry-After")
+            delay = 0
+            if value is not None:
+                try:
+                    delay = float(value)
+                except ValueError:
+                    try:
+                        stamp = parsedate_to_datetime(value)
+                        delay = (stamp - datetime.now(timezone.utc)).total_seconds()
+                    except (ValueError, TypeError, OverflowError):
+                        delay = 2
+                delay = max(0, delay) if math.isfinite(delay) else 2
             error.close()
             if status in {401, 403}:
                 raise ModelError("model_auth_failed") from None

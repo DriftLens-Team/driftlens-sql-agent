@@ -10,7 +10,9 @@ from .errors import AgentError
 
 
 def strict_json(text: str):
+    """설정·요청·모델 응답에 같은 엄격한 JSON 해석 규칙을 적용한다."""
     def pairs(items):
+        """JSON 파서 콜백: 중복 키가 마지막 값으로 조용히 덮어써지는 것을 막는다."""
         result = {}
         for key, value in items:
             if key in result:
@@ -19,9 +21,11 @@ def strict_json(text: str):
         return result
 
     def reject(value):
+        """JSON 파서 콜백: 표준 JSON에 없는 NaN과 Infinity를 거부한다."""
         raise ValueError("nonfinite number")
 
     def number(value):
+        """JSON 파서 콜백: 1e999처럼 float 변환 후 무한대가 되는 값도 거부한다."""
         result = float(value)
         if not math.isfinite(result):
             raise ValueError("nonfinite number")
@@ -41,6 +45,7 @@ class Request:
 
     @classmethod
     def parse(cls, obj):
+        """요청 ID와 업무 필드를 구분해 검증하고 UTC 기준 주간 범위를 확정한다."""
         if (type(obj) is not dict or type(obj.get("request_id")) is not str
                 or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", obj["request_id"])):
             raise AgentError("protocol_error")

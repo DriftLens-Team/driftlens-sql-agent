@@ -16,6 +16,7 @@ UNSUPPORTED = ["이번 주 주문 금액 합계는 얼마인가요?", "이번 �
 
 
 def corpus():
+    """지원 질문·기간·임계값 조합과 미지원 질문을 고정된 20개 사례로 만든다."""
     cases = []
     for week, stamp in [("2025-W03", "2025-01-19T23:59:59Z"), ("2025-W04", "2025-01-26T23:59:59Z")]:
         for threshold in [2000, 3000]:
@@ -30,19 +31,9 @@ def corpus():
     return cases
 
 
-def bounds(period):
-    year, week = period.split("-W")
-    start = date.fromisocalendar(int(year), int(week), 1)
-    return str(start), str(start + timedelta(days=7))
-
-
 def expected(rows, period, threshold):
-    start, end = bounds(period)
+    """모델 SQL과 독립적인 날짜·금액 비교로 정답 건수를 계산한다."""
+    year, week = period.split("-W")
+    first = date.fromisocalendar(int(year), int(week), 1)
+    start, end = str(first), str(first + timedelta(days=7))
     return sum(start <= day < end and amount >= threshold for day, amount in rows)
-
-
-def variants(period, threshold):
-    start, end = bounds(period)
-    return [[], [(start, threshold - 1)], ROWS + [(start, threshold)],
-            ROWS + [(end, threshold + 1)], ROWS + [(start, threshold - 1)],
-            ROWS + [(start, threshold + 1)]]

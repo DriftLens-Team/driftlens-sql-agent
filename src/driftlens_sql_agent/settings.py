@@ -23,6 +23,7 @@ class Budgets:
     max_requests: int = 10000
 
     def __post_init__(self):
+        """dataclass 생성 훅: 잘못된 타입·범위를 가진 설정 객체의 생성을 거부한다."""
         for f in fields(self):
             value = getattr(self, f.name)
             minimum = 0 if f.name in {"model_transient_retries", "action_repair_attempts"} else 1
@@ -35,10 +36,12 @@ class Profile:
     threshold: int
 
     def __post_init__(self):
+        """dataclass 생성 훅: 잘못된 타입·범위를 가진 설정 객체의 생성을 거부한다."""
         if type(self.threshold) is not int or self.threshold < 0:
             raise AgentError("invalid_config")
 
     def definition(self):
+        """선택된 임계값을 모델 입력과 평가 설정이 공유하는 정의로 표현한다."""
         return {"concept_id": "large_orders", "comparison": ">=",
                 "threshold": self.threshold, "amount_unit": "integer_cents"}
 
@@ -58,14 +61,17 @@ MAPPING = {"table": "orders", "order_id": "order_id", "ordered_at": "ordered_at"
 
 
 def _keys(obj, required, optional=()):
+    """필수 키 누락과 알 수 없는 키를 함께 거부해 설정 오타를 드러낸다."""
     if type(obj) is not dict or not set(required) <= obj.keys() or obj.keys() - set(required) - set(optional):
         raise ValueError
 
 
 def load_settings(config_path, profile_path, *, environ=None) -> Settings:
+    """시작 시 설정과 단일 profile을 검증하고 비밀값은 환경에서만 읽는다."""
     env = os.environ if environ is None else environ
     try:
         path = Path(config_path).resolve()
+        # profile 하나만 읽는다. 미래 정의나 평가 정답을 설정으로 병합하지 않는다.
         config = strict_json(path.read_text(encoding="utf-8"))
         profile = strict_json(Path(profile_path).read_text(encoding="utf-8"))
         _keys(config, {"database", "schema_mapping", "amount_unit", "model"}, {"budgets"})
@@ -80,6 +86,7 @@ def load_settings(config_path, profile_path, *, environ=None) -> Settings:
         if (database["kind"] != "sqlite" or database["read_only"] is not True
                 or type(database["path"]) is not str or not database["path"].strip()):
             raise ValueError
+        # 실행 디렉터리가 달라져도 같은 DB를 가리키도록 config 파일을 기준으로 해석한다.
         db_path = (path.parent / database["path"]).resolve()
         if not db_path.is_file():
             raise ValueError
@@ -92,6 +99,7 @@ def load_settings(config_path, profile_path, *, environ=None) -> Settings:
                 raise ValueError
         budget_values = config.get("budgets", {})
         _keys(budget_values, set(), {f.name for f in fields(Budgets)})
+        # 실모델 자격 증명이 없으면 시작을 실패시킨다. fake로 자동 대체하지 않는다.
         model_id = env.get(model["id_env"]) if model["provider"] == "upstage" else None
         api_key = env.get(model["api_key_env"]) if model["provider"] == "upstage" else None
         if model["provider"] == "upstage" and (not model_id or not model_id.strip() or not api_key or not api_key.strip()):
