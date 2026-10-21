@@ -100,3 +100,24 @@
 - 프롬프트 보강에 동일한 고정 사례의 실패를 참고했으므로 독립적인 미공개 평가나 일반적인 text-to-SQL 정확도로 해석하지 않는다.
 
 산출물은 Git 제외 `runs/` 아래 각 실행명 디렉터리의 manifest/results/summary.private 파일에 보존한다. API 키·원문 HTTP 오류는 보고서에 저장하지 않았다. 임계값 충돌 거부의 추가 개선과 재검증이 남아 있으며 이슈 #1과 PR #7은 미완료 상태를 유지한다. dev → main 릴리스 요청은 아직 진행하지 않는다.
+
+## 2026-10-22 임계값 충돌 수정 후 최종 평가
+
+사용자의 임계값 충돌 수정·실제 평가 재실행·PR 반영 요청으로 수행했다. 최신 결과는 이 항목이며 위의 실패 실행은 비교 증거로 유지한다.
+
+호스트가 질문의 명시적 숫자 + 센트/cents 표기를 읽어 선택 profile의 임계값과 비교한다. 다른 금액이 하나라도 있으면 모델·SQL 호출 전에 unsupported_request로 종료한다. 비교용 텍스트만 NFKC 정규화하고 원문은 유지한다. Decimal로 소수를 비교하며 쉼표, 부호, 전각 숫자, 한국어에 붙은 숫자를 처리한다. 동일한 금액과 주차 숫자는 이 검사로 거부하지 않는다. 새 일회성 헬퍼는 만들지 않았다.
+
+| 검증 | 결과 | 증거 |
+| --- | --- | --- |
+| 최초 호스트 검사 평가 | 통과 | clean dcd49bd, runs/phase5-live-cent-guard-20261022, 지원 36/36·거부 24/24·위반 0·호출 93·평균 1442ms |
+| 붙여 쓴 숫자까지 반영한 최종 평가 | 통과 | clean 1532f95, runs/phase5-live-cent-guard-final-20261022, solar-pro4-260806, 지원 36/36·거부 24/24·위반 0·호출 93·평균 1478ms |
+| 임계값 충돌 3회 | 통과 | case-20의 세 반복 모두 unsupported_request, 각 model_calls=0 |
+| 지원 SQL 의미 및 DB 불변 | 통과 | 지원 36건의 변형 DB 검증, 생성 SQL 4개 고유 형태, 전체 60건 원본 DB 해시 유지 |
+| 자동 회귀 | 통과 | editable 및 wheel 설치 환경 각각 42개, 충돌 8개 변형·정상 4개 변형 포함 |
+| 원격 6환경 CI | 통과 | 1532f95, [run 39624748068](https://github.com/DriftLens-Team/driftlens-sql-agent/actions/runs/39624748068), Linux/Windows × Python 3.11/3.12/3.13 |
+
+최종 gate_passed=true, live_quality_verified=true. 질문·fixture·정답·생성 옵션·합격 기준은 이전 실행과 동일하다. 전체 60건 중 3건은 호스트 거부, 57건이 실제 모델을 이용했고 모델 호출은 총 93회다. 따라서 모델 단독의 거부 능력이 개선됐다는 주장이 아니라 호스트 검사를 포함한 에이전트의 고정 gate 통과다. 평가 정답·SQL을 호스트가 주입하지 않았다.
+
+한계: 이 검사는 명시적인 숫자와 센트/cents 표기에 한정된다. 한글 수사(천 센트), 다른 통화, 비정상 구분자나 복잡한 문맥 전체의 충돌을 증명하지 않는다. 금액 언급이 있는 질문은 보수적으로 거부될 수 있다. 같은 고정 corpus의 실패를 참고하여 개선했으므로 독립 미공개 평가나 일반적인 자연어 SQL 정확도로 확대 해석하지 않는다. 실제 benchmark adapter는 별도 범위다.
+
+실행: `python -X utf8 -m evaluation.run --provider upstage --output runs/phase5-live-cent-guard-final-20261022`, 별도 wheel 빌드·설치 후 `python -X utf8 -m unittest discover -s tests/unit -p "test_*.py" -q`. 비밀값은 출력·커밋하지 않았으며 private manifest/results/summary와 이전 실패 기록을 Git 제외 runs/에 보존했다. 수정은 PR #7에 포함된다. PR #6 원래 브랜치만으로 이 통과 결과를 주장하지 않는다. 병합 및 dev → main 릴리스 PR은 별도 승인 절차를 따른다.
