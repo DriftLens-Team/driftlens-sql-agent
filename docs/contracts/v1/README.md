@@ -1,6 +1,6 @@
 # SQL 에이전트 계약 v1
 
-상태: 이슈 [#1](https://github.com/DriftLens-Team/driftlens-sql-agent/issues/1)의 1단계 구현 기준. **계약 문서이며 새 런타임·JSONL 연결이 구현되었다는 뜻은 아니다.** 기존 `agent.py`의 출력은 이 계약과 다르다.
+상태: 이슈 [#1](https://github.com/DriftLens-Team/driftlens-sql-agent/issues/1)의 1단계에서 정의한 구현 기준. **계약 문서이며 새 런타임·JSONL 연결이 구현되었다는 뜻은 아니다.** 2단계에서 기존 `agent.py`는 제거했고 현재 패키지는 도움말·버전 확인만 제공한다. 계약상 실행 동작은 후속 구현 대상이다.
 
 ## 기준과 범위
 

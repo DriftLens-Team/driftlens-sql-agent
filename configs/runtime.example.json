@@ -1,7 +1,7 @@
 {
   "database": {
     "kind": "sqlite",
-    "path": "../driftlens-benchmark/runs/demo/orders.sqlite",
+    "path": "../../driftlens-benchmark/runs/demo/orders.sqlite",
     "read_only": true
   },
   "schema_mapping": {
@@ -16,5 +16,16 @@
     "id_env": "UPSTAGE_MODEL",
     "api_key_env": "UPSTAGE_API_KEY"
   },
-  "max_turns": 5
+  "budgets": {
+    "max_model_calls": 5,
+    "request_timeout_seconds": 60,
+    "model_timeout_seconds": 20,
+    "model_transient_retries": 1,
+    "action_repair_attempts": 1,
+    "sql_timeout_seconds": 2,
+    "sql_vm_steps": 100000,
+    "sql_max_chars": 10000,
+    "sql_max_rows": 100,
+    "max_requests": 10000
+  }
 }
