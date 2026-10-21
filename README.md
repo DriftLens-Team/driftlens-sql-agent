@@ -39,3 +39,5 @@ Phase 5 evaluates the live model before release review. The actual benchmark ada
 ## License
 
 [Apache-2.0](LICENSE).
+
+Evaluation tooling is ready; live quality awaits configured credentials. See [evaluation](evaluation/README.md) and [verification](docs/verification.md).

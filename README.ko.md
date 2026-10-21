@@ -37,3 +37,5 @@ python -m venv .venv
 ## 라이선스
 
 [Apache-2.0](LICENSE).
+
+5단계 평가 도구와 오프라인 리허설을 준비했습니다. 실제 품질은 환경변수 설정 후 평가합니다. [평가 안내](evaluation/README.md)와 [검증 기록](docs/verification.md)을 참고하세요.
