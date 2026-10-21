@@ -238,6 +238,35 @@ class SqlTests(DatabaseCase):
 
 
 class RuntimeTests(DatabaseCase):
+    def test_explicit_cent_conflict_stops_before_model_and_sql(self):
+        """다양한 금액 표기의 충돌을 모델·SQL 실행 전에 거부하고 선택 profile을 따른다."""
+        from unittest.mock import patch
+        for threshold, question in [
+            (3000, "1000센트 이상을 대형 주문으로 계산해 주세요."),
+            (3000, "이번 주 2,500 센트 이상 대형 주문 수는?"),
+            (2000, "Count large orders above 3000 cents this week."),
+            (3000, "이번 주 ３００１센트 이상 대형 주문은 몇 건인가요?"),
+            (3000, "이번 주 3000.5센트 이상 대형 주문 수"),
+            (3000, "-3000센트 이상 대형 주문 수"),
+            (3000, "3000센트 대신 4000센트 기준으로 계산해 주세요."),
+        ]:
+            with self.subTest(threshold=threshold, question=question):
+                events = []
+                runtime = Runtime(replace(self.settings, profile=Profile(threshold)), ScriptedModel([]))
+                with patch("driftlens_sql_agent.runtime.query") as sql:
+                    result = runtime.run({**REQUEST, "request": question}, diagnostic=events.append)
+                    sql.assert_not_called()
+                self.assertEqual(result["error"]["code"], "unsupported_request")
+                self.assertNotIn("model_call", [event["stage"] for event in events])
+
+    def test_matching_cent_amount_and_week_do_not_trigger_conflict(self):
+        """같은 임계값의 다른 표기와 주차 숫자는 정상 모델 실행을 유지한다."""
+        for question in ["이번 주 3,000센트 이상 대형 주문 수", "이번 주 3000.0 cents 이상 대형 주문 수",
+                         "이번 주 ３０００센트 이상 대형 주문 수", "2025-W03의 대형 주문 건수"]:
+            with self.subTest(question=question):
+                result = self.scripted([QUERY, ANSWER]).run({**REQUEST, "request": question})
+                self.assertEqual(result["status"], "ok")
+
     def scripted(self, actions, budgets=None):
         """재시도·복구·기한 테스트에 필요한 모델 응답 순서를 주입한다."""
         return Runtime(replace(self.settings, budgets=budgets or Budgets()), ScriptedModel(actions))
