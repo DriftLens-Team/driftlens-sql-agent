@@ -1,6 +1,6 @@
 # SQL 에이전트 계약 v1
 
-상태: 이슈 [#1](https://github.com/DriftLens-Team/driftlens-sql-agent/issues/1)의 1단계에서 정의한 구현 기준. **계약 문서이며 새 런타임·JSONL 연결이 구현되었다는 뜻은 아니다.** 2단계에서 기존 `agent.py`는 제거했고 현재 패키지는 도움말·버전 확인만 제공한다. 계약상 실행 동작은 후속 구현 대상이다.
+상태: 이슈 [#1](https://github.com/DriftLens-Team/driftlens-sql-agent/issues/1)의 1단계에서 정의한 구현 기준. 3단계 코어와 4단계 Upstage·JSONL 구현의 기준이다. 요건별 실제 검증 결과와 미검증 범위는 [검증 기록](../../verification.md)을 따른다.
 
 ## 기준과 범위
 
@@ -23,7 +23,7 @@ benchmark가 이미 정의한 사항은 요청·응답의 예정 필드, 공개 
 
 ## 실행 설정
 
-새 진입점은 패키지 설치 후 `driftlens-sql-agent --config <path> --profile <path> --protocol-version v1`이다. 이 명령은 후속 구현 대상이다.
+새 진입점은 패키지 설치 후 `driftlens-sql-agent --config <path> --profile <path> --protocol-version v1`이다. 4단계에서 이 명령을 JSONL 실행에 연결했다.
 
 - config와 profile 경로는 필수 CLI 인자다. 시작 시 한 번 읽고 검증하며 프로세스 중 변경하지 않는다. profile 변경은 새 프로세스로 수행한다.
 - config의 DB 상대 경로는 **config 파일의 부모 디렉터리 기준**이다. config/profile CLI 상대 경로만 현재 작업 디렉터리 기준으로 해석한다.
@@ -172,4 +172,4 @@ L3의 sql과 definition_note는 업무 정의 단서를 의도적으로 공개�
 
 요청·응답의 필드/타입/의미를 깨는 변경은 새 계약 버전과 명시적 검토가 필요하다. 이 문서의 agent 측 세부 규칙을 benchmark가 구현했다고 주장하지 않는다. [검증 계획](validation.md)의 기준을 만족한 범위를 PR에 기록한다.
 
-실제 LLM 평가를 실행하지 못하면 키 없는 테스트 통과로 구현 PR은 검토할 수 있지만 실제 품질과 릴리스 준비는 미검증으로 남긴다. 단계별 PR 병합 후에만 다음 단계에 착수하며, main 반영은 별도 릴리스 승인 절차를 따른다.
+실제 LLM 평가를 실행하지 못하면 키 없는 테스트 통과로 구현 PR은 검토할 수 있지만 실제 품질과 릴리스 준비는 미검증으로 남긴다. 단계 진행은 CONTRIBUTING.md와 사용자 승인 범위를 따른다. 이슈 #1은 2026-10-21 사용자 지시에 따라 단계별 검증 뒤 PR 병합 대기 없이 순차 진행한다. main 반영은 별도 릴리스 승인 절차를 따른다.

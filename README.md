@@ -2,7 +2,7 @@
 
 [English](README.md) | [한국어](README.ko.md)
 
-A single SQL agent for the DriftLens benchmark, currently at **phase 3: bounded runtime core**. Config/profile validation, read-only SQLite, request isolation, budgets and observation-grounded answers are implemented. The deterministic fake model runs offline; live Upstage and JSONL transport are pending phase 4.
+A single SQL agent for the DriftLens benchmark, currently at **phase 4: model and JSONL integration**. Config/profile validation, read-only SQLite, request isolation, budgets and observation-grounded answers are implemented. The fake model runs offline; Upstage HTTP and JSONL are implemented. Live model quality remains a separate evaluation.
 
 ## Install and inspect
 
@@ -18,7 +18,7 @@ python -m venv .venv
 
 On other platforms use the corresponding environment executables under `.venv/bin/`. No benchmark checkout, API key or runtime dependency is required for these package checks. Installing the build backend may require package-index access.
 
-The version `0.1.0.dev0` identifies this development package; it is not a release announcement. Runtime invocation with `--config` and `--profile` currently exits with code 2, no stdout, and `transport_not_implemented` on stderr. Use the [Python API](docs/runtime-phase-3.md) for offline execution. Help and version output are CLI discovery commands, not JSONL protocol output.
+The version `0.1.0.dev0` identifies this development package; it is not a release announcement. Run with `--config` and `--profile` to serve UTF-8 JSONL. See [running](docs/running.md), the [Python API](docs/runtime-phase-3.md), and the [requirement verification record](docs/verification.md). Help and version output are CLI discovery commands, not JSONL protocol output.
 
 ## Layout and status
 
@@ -34,7 +34,7 @@ See the [cleanup record](docs/migration-phase-2.md), [architecture status](docs/
 
 ## Next phases
 
-Phase 4 adds the model/JSONL connection and CI. Phase 5 evaluates the live model before release review. The actual benchmark adapter remains separate work. This package does not perform drift detection or scoring.
+Phase 5 evaluates the live model before release review. The actual benchmark adapter remains separate work. This package does not perform drift detection or scoring.
 
 ## License
 

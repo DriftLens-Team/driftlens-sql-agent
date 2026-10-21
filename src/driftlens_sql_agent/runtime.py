@@ -1,4 +1,4 @@
-"""Bounded per-request loop. Stream framing and live HTTP are phase 4."""
+"""Bounded per-request loop independent of stream framing and provider HTTP."""
 
 from importlib.resources import files
 import json
@@ -6,6 +6,7 @@ import time
 
 from .errors import AgentError, ModelError
 from .models import FakeModel, ModelSession
+from .provider import UpstageModel
 from .schemas import Request
 from .settings import Settings
 from .sql_access import query, validate_database
@@ -17,9 +18,7 @@ class Runtime:
         validate_database(settings.db_path)
         self.settings = settings
         if model is None:
-            if settings.provider != "fake":
-                raise NotImplementedError("Live provider is not implemented yet")
-            model = FakeModel()
+            model = FakeModel() if settings.provider == "fake" else UpstageModel(settings.model_id, settings.api_key)
         self.model = model
 
     def run(self, obj, *, diagnostic=None):

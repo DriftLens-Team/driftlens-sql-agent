@@ -81,7 +81,7 @@ class SettingsTests(DatabaseCase):
 
     def test_relative_path_defaults_and_secret_repr(self):
         settings = self.load()
-        self.assertEqual(settings.db_path, self.db)
+        self.assertTrue(settings.db_path.samefile(self.db))
         self.assertEqual(settings.budgets.max_model_calls, 5)
         self.config["model"]["provider"] = "upstage"
         with self.assertRaisesRegex(AgentError, "Invalid startup"):
@@ -180,6 +180,24 @@ class SqlTests(DatabaseCase):
         with self.assertRaises(AgentError):
             validate_database(missing)
         self.assertFalse(missing.exists())
+        with sqlite3.connect(self.db) as db:
+            db.execute("ALTER TABLE orders ADD COLUMN extra TEXT")
+        db.close()
+        with self.assertRaises(AgentError) as caught:
+            validate_database(self.db)
+        self.assertEqual(caught.exception.code, "invalid_config")
+
+    def test_sql_deadline_precedes_sql_error(self):
+        from unittest.mock import patch
+        # Simulate elapsed time during a query, independent of machine speed.
+        with patch("driftlens_sql_agent.sql_access.time.monotonic", side_effect=[0, 0, 0, 11, 11]):
+            with self.assertRaises(AgentError) as caught:
+                query(self.db, SQL, Budgets(), deadline=10)
+        self.assertEqual(caught.exception.code, "request_timeout")
+        with patch("driftlens_sql_agent.sql_access.time.monotonic", side_effect=[0, 0, 0, 3, 3]):
+            with self.assertRaises(AgentError) as caught:
+                query(self.db, SQL, Budgets(), deadline=10)
+        self.assertEqual(caught.exception.code, "sql_error")
 
     def test_locked_database_returns_promptly(self):
         with sqlite3.connect(self.db) as lock:
@@ -238,6 +256,28 @@ class RuntimeTests(DatabaseCase):
                       {"raise_model": "model_request_failed", "transient": True, "retry_after": 2}]:
             result = self.scripted([error]).run(REQUEST)
             self.assertEqual(result["error"]["code"], error["raise_model"])
+        failure = {"raise_model": "model_request_failed", "transient": True}
+        result = self.scripted([failure, failure, QUERY]).run(REQUEST)
+        self.assertEqual(result["error"]["code"], "model_request_failed")
+        result = self.scripted([failure, {"action": "bad"}], Budgets(max_model_calls=2)).run(REQUEST)
+        self.assertEqual(result["error"]["code"], "turn_limit")
+
+    def test_generated_sql_semantic_variations(self):
+        cases = [
+            ([], "2025-W03", "2025-01-19T23:59:59Z", 0),
+            ([("2025-01-15", 2999)], "2025-W03", "2025-01-19T23:59:59Z", 0),
+            ([("2025-01-15", 2999), ("2025-01-15", 3000), ("2025-01-15", 3001)], "2025-W03", "2025-01-19T23:59:59Z", 2),
+            ([("2025-01-12", 5000), ("2025-01-20", 5000)], "2025-W03", "2025-01-19T23:59:59Z", 0),
+            ([("2020-12-28", 3000), ("2021-01-03", 3001), ("2021-01-04", 5000)], "2020-W53", "2021-01-03T23:59:59Z", 2),
+        ]
+        for rows, period, stamp, expected in cases:
+            with self.subTest(period=period, rows=rows):
+                with sqlite3.connect(self.db) as db:
+                    db.execute("DELETE FROM orders")
+                    db.executemany("INSERT INTO orders VALUES(?,?,?)", [(str(i), *r) for i, r in enumerate(rows)])
+                db.close()
+                result = Runtime(self.settings).run({**REQUEST, "period": period, "timestamp": stamp})
+                self.assertEqual(result["observation"]["reported_values"][0]["value"], expected)
 
     def test_call_limits_and_final_call_success(self):
         result = self.scripted([QUERY, ANSWER], Budgets(max_model_calls=2)).run(REQUEST)

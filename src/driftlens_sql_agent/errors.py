@@ -4,6 +4,8 @@ MESSAGES = {
     "invalid_config": "Invalid startup configuration.",
     "invalid_request": "Invalid request fields or period.",
     "protocol_error": "Invalid protocol object or identifier.",
+    "duplicate_request_id": "Request identifier already used.",
+    "request_limit": "Process request limit exceeded.",
     "unsupported_request": "Only weekly large-order counts are supported.",
     "model_auth_failed": "Model authentication failed.",
     "model_request_failed": "Model request failed.",

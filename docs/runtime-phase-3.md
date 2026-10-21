@@ -1,6 +1,6 @@
 # 3단계 실행 코어
 
-설정·SQL 도구·bounded loop를 Python API로 사용할 수 있습니다. CLI JSONL과 실제 Upstage 통신은 아직 연결하지 않았습니다.
+설정·SQL 도구·bounded loop를 Python API로 사용할 수 있습니다. 이 문서는 3단계 Python API를 설명합니다. 4단계의 CLI와 Upstage 연결은 [실행 안내](running.md)를 참고하세요.
 
 ## 오프라인 실행
 
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     print(result)
 ```
 
-fake는 검증 계획의 한국어 질문 3개만 인식하고 나머지는 unsupported_request로 거부합니다. 자연어 이해 성능을 대신하지 않습니다. upstage 설정은 키를 검증하지만 Runtime의 기본 모델 생성은 NotImplementedError로 중단하며 fake로 전환하지 않습니다.
+fake는 검증 계획의 한국어 질문 3개만 인식하고 나머지는 unsupported_request로 거부합니다. 자연어 이해 성능을 대신하지 않습니다. upstage 설정은 키를 검증하고 실제 HTTP 모델을 생성하며 fake로 전환하지 않습니다.
 
 ## 동작과 경계
 
@@ -35,8 +35,8 @@ fake는 검증 계획의 한국어 질문 3개만 인식하고 나머지는 unsu
 - 결과는 비음수 정수 하나여야 합니다. 새 query 또는 잘못된 action은 기존 observation을 무효화합니다. 답변 표현만 잘못됐다면 관측값을 유지하며 예산 안에서 복구합니다.
 - 답변은 제한된 한국어 문장 형식으로 검증합니다. 선택 접두어는 `이번 주 `, `해당 주의 `, `주간 `이고 본문은 `대형 주문은 N건입니다.`, `대형 주문 수는 N건입니다.`, `대형 주문 건수는 N건입니다.`입니다. 일반적인 한국어 문장 전체를 지원하지 않습니다.
 - 모델 호출은 요청별 별도 프로세스에서 실행하며 시간 초과 시 종료합니다. 프로세스 시작 시간도 호출 예산에 포함합니다. 종료 정리에 짧은 추가 시간이 들 수 있습니다.
-- 정상 요청의 실행 오류는 status=error와 고정 메시지로 반환합니다. 잘못된 요청은 Request.parse의 AgentError, 예상하지 못한 내부 오류는 예외로 호출자에게 전달합니다. 종료 코드와 스트림 오류 처리는 4단계 transport 책임입니다.
+- 정상 요청의 실행 오류는 status=error와 고정 메시지로 반환합니다. 잘못된 요청은 Request.parse의 AgentError, 예상하지 못한 내부 오류는 예외로 호출자에게 전달합니다. 종료 코드와 스트림 오류 처리는 transport가 담당합니다.
 - diagnostic 콜백에는 request_id·stage·elapsed_ms·code만 전달합니다. 키·SQL·원문 질문·모델 응답은 포함하지 않습니다. private manifest 저장은 별도 연결 예정입니다.
-- ID 중복 거부, JSONL 바이트/줄 검증, max_requests 적용은 4단계 transport 책임입니다. 이 코어 API는 같은 ID를 재사용해도 매번 새 요청으로 실행합니다.
+- ID 중복 거부, JSONL 바이트/줄 검증, max_requests 적용은 transport가 처리합니다. 이 코어 API는 같은 ID를 재사용해도 매번 새 요청으로 실행합니다.
 
 자동 테스트는 임시 SQLite와 fake/scripted 모델로 실행했습니다. 실제 모델 품질, live HTTP, 실제 benchmark adapter는 미검증입니다.

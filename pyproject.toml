@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "driftlens-sql-agent"
 version = "0.1.0.dev0"
-description = "Bounded SQL agent core for DriftLens (live transport pending)"
+description = "Bounded read-only SQL agent with Upstage and JSONL"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
