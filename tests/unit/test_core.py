@@ -81,7 +81,7 @@ class SettingsTests(DatabaseCase):
 
     def test_relative_path_defaults_and_secret_repr(self):
         settings = self.load()
-        self.assertEqual(settings.db_path, self.db)
+        self.assertTrue(settings.db_path.samefile(self.db))
         self.assertEqual(settings.budgets.max_model_calls, 5)
         self.config["model"]["provider"] = "upstage"
         with self.assertRaisesRegex(AgentError, "Invalid startup"):

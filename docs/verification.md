@@ -33,7 +33,7 @@
 | stdout 10필드 변환·오류 분리·누락/중복/비정상 종료 | 통과 | AdapterTests; 테스트 전용 부모, 실제 adapter 아님 |
 | 비공개 진단·키/경로/원문 비노출 | 통과 | 고정 오류·메타데이터 테스트, provider repr·stdout/stderr 분리 |
 | wheel 빌드·설치·문법 검사 | 통과 | 별도 wheel 환경에서 35개 통과, compileall·diff 검사 통과 |
-| GitHub Actions 6개 환경 | 확인 예정 | Linux/Windows × Python 3.11/3.12/3.13 |
+| GitHub Actions 6개 환경 | 재검증 중 | 최초 Windows 경로 표기 비교 실패를 samefile로 수정. Linux/Windows × Python 3.11/3.12/3.13 |
 | 실제 Upstage 품질 | 미검증 | 5단계, 자격 증명 설정 대기 |
 | 실제 benchmark adapter·private manifest 결합 | 별도 범위 | 이 저장소의 모의 테스트로 완료 처리하지 않음 |
 
