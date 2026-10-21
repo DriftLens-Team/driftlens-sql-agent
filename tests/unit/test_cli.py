@@ -21,7 +21,7 @@ class InstalledCliTests(unittest.TestCase):
     def test_help_is_available_without_runtime_configuration(self):
         result = self.run_cli("--help")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("JSONL transport not implemented", result.stdout)
+        self.assertIn("UTF-8 JSONL", result.stdout)
         self.assertIn("--profile", result.stdout)
         self.assertEqual(result.stderr, "")
 
@@ -34,7 +34,7 @@ class InstalledCliTests(unittest.TestCase):
         result = self.run_cli("--config", "missing.json", "--profile", "missing-profile.json")
         self.assertEqual(result.returncode, 2)
         self.assertEqual(result.stdout, "")
-        self.assertIn("transport_not_implemented", result.stderr)
+        self.assertIn("invalid_config", result.stderr)
 
     def test_unsupported_protocol_is_rejected(self):
         result = self.run_cli("--config", "x", "--profile", "y", "--protocol-version", "v2")
