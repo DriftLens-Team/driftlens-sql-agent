@@ -1,4 +1,4 @@
-"""Package entry point. Phase 2 provides discovery, not a working runtime."""
+"""Package discovery entry point; JSONL transport is pending phase 4."""
 
 import argparse
 from importlib.metadata import version
@@ -9,7 +9,7 @@ import sys
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="driftlens-sql-agent",
-        description="DriftLens SQL agent: package foundation; runtime not implemented.",
+        description="DriftLens SQL agent: bounded core available; JSONL transport not implemented.",
     )
     parser.add_argument(
         "--version", action="version",
@@ -19,5 +19,5 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profile", type=Path, required=True, help="Business profile path (future runtime)")
     parser.add_argument("--protocol-version", choices=["v1"], default="v1")
     parser.parse_args(argv)
-    print("runtime_not_implemented: SQL execution and JSONL transport are not available yet.", file=sys.stderr)
+    print("transport_not_implemented: JSONL transport is not available yet; use the Python runtime API.", file=sys.stderr)
     return 2

@@ -1,24 +1,22 @@
 # 아키텍처와 구현 상태
 
-[English](../README.md) | [한국어](../README.ko.md)
+이슈 #1의 3단계입니다. [Python API 실행 안내](runtime-phase-3.md)와 [계약 v1](contracts/v1/README.md)을 참고하세요.
 
-이슈 #1의 2단계입니다. 기존 replay 구현은 제거했고 설치 가능한 src 패키지와 CLI 확인 기능을 제공합니다. 실제 agent runtime은 아직 없습니다.
+| 모듈 | 구현 역할 |
+| --- | --- |
+| settings.py | config·단일 profile·고정 매핑·예산 검증, config 상대 DB 경로 |
+| schemas.py | 중복 키·비유한 수 거부, 요청 ID·ISO 주·주말 timestamp 검증 |
+| sql_access.py | 읽기 전용 SQLite, 권한 검사, 시간·VM·길이·행 수 제한 |
+| models.py | 모델 인터페이스, fake 모델, 요청별 별도 프로세스와 호출 시간 제한 |
+| runtime.py | 상태·호출·재시도·복구 예산, 관측값 무효화, 응답과 진단 |
+| validation.py / errors.py | action·단일 정수 결과·답변 검사, 고정 오류 메시지 |
+| prompts/system.txt | 모델에 전달할 스키마·정의·주간 범위·행동 규칙 |
+| cli.py | 도움말·버전. JSONL 실행은 명시적 미구현 오류로 종료 |
 
-## 현재 구현
+상태와 모델 프로세스는 요청별로 새로 만듭니다. 선택된 profile 하나만 제공하고 truth·변경 일정·미래 profile은 전달하지 않습니다. 빈 agents/memory/planner 폴더는 만들지 않습니다.
 
-- `pyproject.toml`: 패키지 메타데이터, src 탐색, console entry point.
-- `src/driftlens_sql_agent/cli.py`: 도움말·설치 버전과 인자 형식 확인. 정상적인 실행 인자를 받아도 명시적 미구현 오류로 종료합니다.
-- `tests/unit/`: 작업 디렉터리 밖에서 설치된 패키지의 도움말·버전·미구현 실행·미지원 프로토콜을 확인합니다.
-- 설정 예시는 v1 계약의 config 상대 경로와 budgets에 맞춰 갱신했지만 아직 읽지 않습니다.
+L3의 SQL·definition_note는 공개할 수 있습니다. 조회 결과와 답변의 일치는 SQL 의미 검증 또는 drift 평가를 대신하지 않습니다. 잘못된 기간·조건을 생성하는 문제는 [검증 계획](contracts/v1/validation.md)의 별도 평가 대상입니다.
 
-## 후속 구현 경계
+4단계는 실제 Upstage 모델·JSONL framing/중복 ID/요청 수 상한·CI, 5단계는 live 품질 검증입니다. private 실행 manifest와 실제 benchmark adapter도 현재 완료로 간주하지 않습니다. benchmark 내부 import는 없습니다.
 
-계약은 [v1 문서](contracts/v1/README.md), 검증 범위는 [검증 계획](contracts/v1/validation.md)이 기준입니다. 필요한 기능을 구현할 때만 모듈을 추가하며 빈 runtime/model/tool 파일은 만들지 않습니다.
-
-3단계는 설정·SQL 접근·상태 및 예산 관리, 4단계는 실제 모델·JSONL·CI, 5단계는 실제 LLM 품질 검증입니다. benchmark 내부 모듈 의존성은 제거했지만 실제 adapter 연결이 완료된 것은 아닙니다.
-
-선택된 profile 하나만 에이전트에 제공하며 변경 일정과 truth는 입력하지 않습니다. L3의 SQL·definition_note는 공개할 수 있고 실제 profile ID·정의 해시·일정·truth는 비공개입니다. 답변의 결과 일치와 생성 SQL의 의미, drift 평가는 구분합니다.
-
-코드·설정·프롬프트·모델·업무 정의·DB·계약 식별자는 독립적으로 비공개 실행 기록에 남길 계획입니다. 코드나 DB 해시 변경만으로 업무 정의 drift라고 판단하지 않습니다. 구체적인 소유 책임과 진단 경계는 계약 문서를 따릅니다.
-
-[정리 내역](migration-phase-2.md)과 [협업 절차](../CONTRIBUTING.md)를 함께 참고하세요.
+[2단계 정리 내역](migration-phase-2.md)과 [협업 절차](../CONTRIBUTING.md)를 참고하세요.
