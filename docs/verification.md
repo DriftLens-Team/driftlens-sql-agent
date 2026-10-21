@@ -72,7 +72,7 @@
 | wheel 빌드·문법·공백 검사 | 통과 | pip wheel, compileall src tests evaluation, git diff --check |
 | fake 평가 60건 | 통과 | 지원 36/36, 미지원 거부 24/24, 위반 0, 호출 96, 평균 202ms |
 | 재현 가능한 평가 입력 | 통과 | clean b10ee18에서 실행, runs/refactor-offline-20261021/에 private manifest/results/summary 보관 |
-| 원격 CI | 대기 | 이 변경의 PR에서 Linux/Windows × Python 3.11/3.12/3.13 결과 확인 필요 |
+| 원격 CI | 통과 | 5831b66, [run 39620800333](https://github.com/DriftLens-Team/driftlens-sql-agent/actions/runs/39620800333): Linux/Windows × Python 3.11/3.12/3.13 총 6개 환경, wheel 빌드·설치·문법·40개 테스트 모두 성공 |
 | 실제 Upstage 품질 | 미검증 | 환경변수 설정 완료 알림 대기. 이번 fake 평가로 live gate를 통과 처리하지 않음 |
 
 실행: `python -m unittest discover -s tests/unit -p "test_*.py" -v`, `python -m compileall -q src tests evaluation`, `python -m pip wheel . --no-deps --wheel-dir .venv/refactor-dist`, 별도 wheel 환경 재설치 후 동일 테스트, `python -X utf8 -m evaluation.run --provider fake --output runs/refactor-offline-20261021`. 테스트 수에는 subTest 변형을 별도 합산하지 않는다.
