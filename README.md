@@ -2,6 +2,8 @@
 
 [English](README.md) | [한국어](README.ko.md)
 
+Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md). The approved redesign starts with the [v1 agent contract](docs/contracts/v1/README.md) and [validation plan](docs/contracts/v1/validation.md) (Korean); these describe the planned implementation, not the current replay runtime below.
+
 A bounded SQL replay agent for [DriftLens Benchmark](https://github.com/DriftLens-Team/driftlens-benchmark). It reads public L3 logs, queries a source-only SQLite snapshot, and checks that its Korean answer agrees with the executed SQL result.
 
 ## Features

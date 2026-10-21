@@ -2,6 +2,8 @@
 
 [English](README.md) | [한국어](README.ko.md)
 
+협업 절차는 [CONTRIBUTING.md](CONTRIBUTING.md), 승인된 재설계 기준은 [에이전트 계약 v1](docs/contracts/v1/README.md)과 [검증 계획](docs/contracts/v1/validation.md)을 참고하세요. 계약은 후속 구현 기준이며 아래 기존 replay 실행 기능과 구분합니다.
+
 [DriftLens Benchmark](https://github.com/DriftLens-Team/driftlens-benchmark)의 SQL을 재실행하는 에이전트입니다. 공개 L3 로그를 읽고 원본 데이터만 담긴 SQLite 스냅샷을 조회한 뒤, 한국어 답변이 실제 SQL 결과와 일치하는지 검사합니다.
 
 ## 주요 기능

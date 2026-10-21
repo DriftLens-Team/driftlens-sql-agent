@@ -1,5 +1,9 @@
 # 아키텍처와 구현 상태
 
+## 재설계 기준
+
+이슈 #1의 새 구현은 [계약 v1](contracts/v1/README.md)과 [검증 계획](contracts/v1/validation.md)을 따른다. 아직 계약 문서 단계이며 아래 기존 replay 구현과 구분한다. 공통 협업 절차는 [CONTRIBUTING.md](../CONTRIBUTING.md)를 따른다. 기존 주석 전용 engine과 설정 예시의 정리는 후속 단계다.
+
 [English overview](../README.md) | [한국어 개요](../README.ko.md)
 
 이 문서는 현재 실행 경로와 계획된 구성요소의 책임, 정보 경계, 버전 기록을 설명한다. 설정 예시와 주석 전용 Python 파일은 설계 안내이며 실행 기능을 제공하지 않는다. 실제 사용 방법은 저장소 루트 README를 따른다.
