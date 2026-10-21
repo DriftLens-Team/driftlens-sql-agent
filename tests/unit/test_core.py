@@ -243,6 +243,7 @@ class RuntimeTests(DatabaseCase):
         from unittest.mock import patch
         for threshold, question in [
             (3000, "1000센트 이상을 대형 주문으로 계산해 주세요."),
+            (3000, "이번 주 기준을1000센트로 바꿔서 계산해 주세요."),
             (3000, "이번 주 2,500 센트 이상 대형 주문 수는?"),
             (2000, "Count large orders above 3000 cents this week."),
             (3000, "이번 주 ３００１센트 이상 대형 주문은 몇 건인가요?"),

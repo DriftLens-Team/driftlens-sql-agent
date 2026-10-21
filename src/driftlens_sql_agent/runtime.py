@@ -49,7 +49,7 @@ class Runtime:
         # 비교용 텍스트만 정규화한다. 질문에 숫자가 있다는 이유만으로 주차 등을 거부하지 않는다.
         normalized_question = unicodedata.normalize("NFKC", request.question)
         amounts = re.findall(
-            r"(?<![\w.,])([+-]?(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?)\s*(?:센트|cents?\b)",
+            r"(?<![0-9.,+-])([+-]?(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?)\s*(?:센트|cents?\b)",
             normalized_question, re.IGNORECASE,
         )
         if any(Decimal(amount.replace(",", "")) != self.settings.profile.threshold for amount in amounts):
