@@ -7,3 +7,4 @@
 - 요청마다 상태를 격리하고 실행에 선택된 profile 하나만 사용한다. truth·변경 일정·미래 profile을 모델 입력에 포함하지 않는다.
 - 단일 에이전트 구조를 유지한다. memory/planner는 필요가 승인될 때 구현하며 빈 폴더를 만들지 않는다.
 - 기본 자동 검증은 실제 LLM 키 없이 실행한다. 실제 LLM 품질을 확인하지 않았다면 미검증으로 보고한다.
+- 패키지 설치 후 같은 Python 환경에서 `python -m unittest discover -s tests/unit -p "test_*.py" -v`로 현재 테스트를 실행한다. 2단계의 CLI 확인 테스트를 런타임 검증으로 보고하지 않는다.
