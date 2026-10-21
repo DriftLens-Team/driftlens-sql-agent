@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "driftlens-sql-agent"
 version = "0.1.0.dev0"
-description = "SQL agent for DriftLens (package foundation; runtime pending)"
+description = "Bounded SQL agent core for DriftLens (live transport pending)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
@@ -16,3 +16,6 @@ driftlens-sql-agent = "driftlens_sql_agent.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+driftlens_sql_agent = ["prompts/*.txt"]
