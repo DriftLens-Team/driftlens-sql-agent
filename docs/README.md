@@ -19,6 +19,6 @@
 
 L3의 SQL·definition_note는 공개할 수 있습니다. 조회 결과와 답변의 일치는 SQL 의미 검증 또는 drift 평가를 대신하지 않습니다. 잘못된 기간·조건을 생성하는 문제는 [검증 계획](contracts/v1/validation.md)의 별도 평가 대상입니다.
 
-Upstage 연결·JSONL·CI 설정을 구현했습니다. 5단계는 live 품질 검증입니다. private 실행 manifest와 실제 benchmark adapter도 현재 완료로 간주하지 않습니다. benchmark 내부 import는 없습니다.
+Upstage 연결·JSONL·CI와 private 평가 manifest를 구현했습니다. 2026-10-22 실제 모델 평가에서 지원 36/36, 미지원 거부 21/24로 릴리스 기준에 미달했습니다. 임계값 충돌 거부가 남아 있습니다. 실제 benchmark adapter는 별도 범위이며 benchmark 내부 import는 없습니다.
 
 [2단계 정리 내역](migration-phase-2.md)과 [협업 절차](../CONTRIBUTING.md)를 참고하세요.

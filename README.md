@@ -40,4 +40,4 @@ Phase 5 evaluates the live model before release review. The actual benchmark ada
 
 [Apache-2.0](LICENSE).
 
-Evaluation tooling is ready; live quality awaits configured credentials. See [evaluation](evaluation/README.md) and [verification](docs/verification.md).
+Live evaluation ran on 2026-10-22 with solar-pro4-260806: supported 36/36, unsupported refusals 21/24. The release gate failed because conflicting threshold requests were accepted. See [evaluation](evaluation/README.md) and [verification](docs/verification.md).

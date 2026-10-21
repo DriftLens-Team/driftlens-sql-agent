@@ -76,3 +76,27 @@
 | 실제 Upstage 품질 | 미검증 | 환경변수 설정 완료 알림 대기. 이번 fake 평가로 live gate를 통과 처리하지 않음 |
 
 실행: `python -m unittest discover -s tests/unit -p "test_*.py" -v`, `python -m compileall -q src tests evaluation`, `python -m pip wheel . --no-deps --wheel-dir .venv/refactor-dist`, 별도 wheel 환경 재설치 후 동일 테스트, `python -X utf8 -m evaluation.run --provider fake --output runs/refactor-offline-20261021`. 테스트 수에는 subTest 변형을 별도 합산하지 않는다.
+
+## 2026-10-22 실제 Upstage 평가
+
+환경변수 설정 완료 알림을 받아 `solar-pro4-260806`으로 실행했다. 아래 실행은 각각 clean 커밋에서 manifest를 먼저 고정했다. 기존의 자격 증명 대기 상태를 대체한다. 실패 기록도 보존하며 질문·fixture·정답·합격 기준은 변경하지 않았다.
+
+| 실행 | 코드 | 지원 성공 | 미지원 거부 | 탐지된 위반 | 호출 수 | 평균 지연 | 판정 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| phase5-live-20261022 | 487ff8c | 0/36 | 0/24 | 0 | 60 | 298ms | 모델 요청 오류 60건 |
+| phase5-live-json-fix-20261022 | 48b1628 | 36/36 | 13/24 | 0 | 108 | 1989ms | 거부 기준 실패 |
+| phase5-live-intent-fix-20261022 | 24fa004 | 36/36 | 21/24 | 0 | 99 | 1572ms | 거부 기준 실패 |
+
+첫 실행의 HTTP 400 원인은 JSON 응답 모드가 메시지 내 `JSON` 단어를 요구하는데 프롬프트에 예시만 있었기 때문이다. JSON 객체 반환 지시를 추가하고 실제 배포 프롬프트를 사용하는 HTTP 회귀 검증을 보강했다. 별도 최소 API 진단 2회는 위 평가 호출 수에 포함하지 않는다.
+
+두 번째 실행은 합계 2회, 월간 3회, 다른 주차 3회, 다른 임계값 3회를 수락했다. SQL 실행 전에 의도·기간·정의 충돌을 검사하고 요청을 지원 범위로 임의 변환하지 않도록 프롬프트를 보강했다.
+
+최종 실패는 case-20의 세 반복이다. 질문은 1000센트 이상으로 정의 변경을 요구했으나, 모델은 거부하지 않고 선택 profile의 3000센트 조건으로 SQL을 실행해 2건으로 답했다. SQL과 선택 profile의 결과 일치는 확인됐지만 사용자의 충돌 요청을 거부해야 하는 계약을 어겼으므로 실패다. 결과를 성공으로 바꾸거나 평가기에서 SQL/정답을 교체하지 않았다.
+
+- 최종 지원 36건은 모두 변형 DB의 SQL 의미 검사까지 통과했다. 생성 SQL은 4개 고유 형태였다.
+- 최종 60건 모두 원본 DB 해시가 유지됐다. 프로토콜·정보 경계 검사에서 탐지된 위반은 0이다. 모든 자유형 유출 가능성이 없다는 증명은 아니다.
+- 최종 코드의 wheel 빌드·설치 및 40개 테스트 통과. [CI run 39623356940](https://github.com/DriftLens-Team/driftlens-sql-agent/actions/runs/39623356940)의 Linux/Windows × Python 3.11/3.12/3.13 6개 환경 모두 성공.
+- 최종 `gate_passed=false`, `live_quality_verified=false`. 지원 최소 33/36은 충족했지만 미지원 24/24 조건은 충족하지 못했다. 실제 평가를 실행했으나 품질 승인은 실패한 상태다.
+- 프롬프트 보강에 동일한 고정 사례의 실패를 참고했으므로 독립적인 미공개 평가나 일반적인 text-to-SQL 정확도로 해석하지 않는다.
+
+산출물은 Git 제외 `runs/` 아래 각 실행명 디렉터리의 manifest/results/summary.private 파일에 보존한다. API 키·원문 HTTP 오류는 보고서에 저장하지 않았다. 임계값 충돌 거부의 추가 개선과 재검증이 남아 있으며 이슈 #1과 PR #7은 미완료 상태를 유지한다. dev → main 릴리스 요청은 아직 진행하지 않는다.

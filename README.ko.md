@@ -38,4 +38,4 @@ python -m venv .venv
 
 [Apache-2.0](LICENSE).
 
-5단계 평가 도구와 오프라인 리허설을 준비했습니다. 실제 품질은 환경변수 설정 후 평가합니다. [평가 안내](evaluation/README.md)와 [검증 기록](docs/verification.md)을 참고하세요.
+2026-10-22 solar-pro4-260806 실제 평가 결과는 지원 36/36, 미지원 거부 21/24입니다. 임계값 충돌 요청을 수락하여 릴리스 기준은 미통과입니다. [평가 안내](evaluation/README.md)와 [검증 기록](docs/verification.md)을 참고하세요.
