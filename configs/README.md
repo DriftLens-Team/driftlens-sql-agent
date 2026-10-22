@@ -1,9 +1,35 @@
 # 런타임 설정 예시
 
-`runtime.example.json`은 [계약 v1](../docs/contracts/v1/README.md)에 맞춘 설정이며 Python API의 load_settings가 로딩합니다. CLI에서도 시작 시 검증하여 로딩합니다.
+[`runtime.example.json`](runtime.example.json)을 복사하고 `database.path`를 사용할 SQLite DB 경로로 수정합니다. CLI는 시작 시 설정을 검증합니다.
 
-DB 상대 경로는 config 파일의 부모 디렉터리가 기준입니다. 이 예시가 저장소의 configs 안에 있을 때 `../../driftlens-benchmark/runs/demo/orders.sqlite`는 형제 benchmark 저장소를 가리킵니다. 실제 파일 존재를 보장하지 않습니다. 설정 파일을 다른 위치로 복사하면 DB 경로를 조정해야 합니다.
+## 설정 항목
 
-database는 SQLite 읽기 전용 연결, schema_mapping은 계약의 고정 orders 매핑, amount_unit은 integer_cents, model은 provider와 모델 ID·API 키 환경변수 이름입니다. budgets는 모델 호출·시간·SQL·요청 수 상한입니다. 과거 max_turns 키는 제거했습니다. CSV 변환은 benchmark 책임이고 단위 변환·다른 DB는 이번 범위 밖입니다.
+| 항목 | 설정 방법 |
+| --- | --- |
+| `database` | `kind`는 `sqlite`, `read_only`는 `true`로 지정합니다. `path`는 존재하는 SQLite DB 파일을 가리켜야 합니다. |
+| `schema_mapping` | 예시의 `orders` 테이블과 `order_id`, `ordered_at`, `order_total_cents` 열 매핑을 유지합니다. 현재 구현은 이 고정 매핑만 지원합니다. |
+| `amount_unit` | `integer_cents`를 사용합니다. 금액은 정수 센트 단위입니다. |
+| `model` | `provider`는 `upstage` 또는 `fake`입니다. `id_env`와 `api_key_env`에는 모델 ID와 API 키를 읽을 환경변수 이름을 지정합니다. |
+| `budgets` | 모델 호출·재시도 횟수, 요청·모델·SQL 시간, SQL 실행량·문자 수·결과 행 수, 요청 수를 제한합니다. 생략한 항목은 기본값을 사용하며 예시의 상한보다 높게 설정할 수 없습니다. |
 
-실제 비밀 값은 저장하지 않습니다. 설정 로딩·오류 검증은 구현됐으며 Upstage HTTP 연결은 구현됐으며 실제 품질 평가는 별도입니다. 오프라인 실행은 provider를 명시적으로 fake로 지정합니다. [실행 안내](../docs/runtime-phase-3.md)를 참고하세요.
+DB 상대 경로는 **설정 파일이 있는 디렉터리**를 기준으로 해석합니다. 예시의 `../../driftlens-benchmark/runs/demo/orders.sqlite`는 형제 benchmark 저장소의 파일을 가리킵니다. 해당 파일이 없다면 사용 가능한 DB 경로로 변경해야 합니다. 설정 파일을 다른 위치로 복사할 때도 상대 경로를 확인하세요.
+
+업무 정의와 임계값은 런타임 설정과 별도로 `--profile`에서 선택합니다. 지원하는 DB 스키마와 설정 값의 자세한 조건은 [계약 v1](../docs/contracts/v1/README.md)을 참고하세요.
+
+## 모델과 실행
+
+실제 모델을 사용하려면 `model.provider`를 `upstage`로 지정하고, 실행 환경에 `UPSTAGE_MODEL`과 `UPSTAGE_API_KEY`를 설정합니다. 환경변수 이름을 변경했다면 `id_env`와 `api_key_env`도 맞춰야 합니다. API 키 자체를 JSON 설정에 저장하지 않습니다.
+
+API 호출 없이 실행 흐름을 확인하려면 `model.provider`를 `fake`로 지정합니다. 이 모델은 정해진 테스트 질문만 지원합니다.
+
+Python 3.11 이상에서 패키지를 설치한 뒤, 수정한 설정 파일과 profile을 지정해 실행합니다.
+
+```shell
+python -m pip install -e .
+python -m driftlens_sql_agent --config configs/runtime.example.json --profile profiles/v1/profile.example.json --protocol-version v1
+```
+
+CLI는 `.env`를 자동으로 읽지 않습니다. VS Code 디버깅 설정은 `.env`를 읽어 실행 환경에 전달하며, `runs/local-debug/runtime.json`을 사용합니다.
+
+- [JSONL 입력과 실행 안내](../docs/running.md)
+- [VS Code 디버깅 안내](../docs/debugging.md)
