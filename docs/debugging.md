@@ -9,11 +9,11 @@ python -m venv .venv
 
 macOS/Linux는 설치 명령의 Python 경로를 `.venv/bin/python`으로 바꿉니다. 이미 가상환경과 editable 설치가 있으면 다시 만들 필요가 없습니다.
 
-루트의 Git 제외 `.env`에 `UPSTAGE_MODEL`과 `UPSTAGE_API_KEY`를 설정합니다. VS Code가 디버그 프로세스에 전달하며 CLI 자체가 `.env`를 자동 로딩하는 것은 아닙니다. 값은 커밋하지 않습니다.
+실제 모델을 사용하려면 루트의 Git 제외 `.env`에 `UPSTAGE_MODEL`과 `UPSTAGE_API_KEY`를 설정합니다. 빠른 시작 스크립트가 읽으며 실행 환경의 값이 우선합니다. 둘 다 미지정이면 오프라인 fake를 사용하고, 일부 누락 또는 빈 값은 오류입니다. 값은 커밋하지 않습니다. 자세한 형식은 [빠른 시작](../README.ko.md)을 참고하세요.
 
 ## F5 실행
 
-1. 실행 및 디버그(Ctrl+Shift+D)에서 `SQL agent - 실제 CLI (Upstage)`를 선택합니다.
+1. 실행 및 디버그(Ctrl+Shift+D)에서 `SQL agent - Quick start (auto)`를 선택합니다.
 2. 실제 `src/driftlens_sql_agent/` 코드 줄 번호 왼쪽에 중단점을 겁니다.
 3. F5를 누르면 준비 작업이 `runs/local-debug/orders.sqlite`와 `runtime.json`을 없는 경우에만 생성한 뒤 실제 CLI 모듈을 실행합니다. DB는 합성 데이터이며 기존 파일은 덮어쓰지 않습니다. 기존 로컬 DB가 있으면 조회 결과는 그 내용에 따릅니다.
 4. 통합 터미널에 아래 JSON을 한 줄로 입력하고 Enter를 누릅니다. Debug Console에 입력하지 않습니다. 질문 입력 시 실제 API 호출과 비용이 발생할 수 있습니다.
@@ -22,9 +22,11 @@ macOS/Linux는 설치 명령의 Python 경로를 `.venv/bin/python`으로 바꿉
 {"request_id":"debug-1","request":"이번 주 대형 주문은 몇 건인가요?","period":"2025-W03","timestamp":"2025-01-19T23:59:59Z"}
 ```
 
-새로 만든 합성 DB의 v1(2000센트 이상) 예상 건수는 2입니다. 같은 프로세스에서 다시 질문할 때는 request_id를 바꿉니다. API 키 없이 실행하려면 로컬 config의 `model.provider`를 `fake`로 설정합니다. Upstage를 사용하려면 `upstage`로 설정합니다. 기존 config는 F5 실행 시에도 보존됩니다.
+새로 만든 합성 DB의 v1(2000센트 이상) 예상 건수는 2입니다. 같은 프로세스에서 다시 질문할 때는 request_id를 바꿉니다. 자동 선택은 실행용 임시 config에만 적용되며 기존 config는 보존됩니다. 실제 모델 호출이 실패해도 fake로 전환하지 않습니다.
 
-실제 DB를 사용하려면 `runs/local-debug/runtime.json`의 database.path를 수정합니다. 상대 경로 기준은 config 파일 디렉터리입니다. profile은 launch.json의 `--profile` 인자로 선택합니다. 기본은 v1입니다.
+실제 DB를 사용하려면 `runs/local-debug/runtime.json`의 database.path를 수정합니다. 상대 경로 기준은 config 파일 디렉터리입니다. 빠른 시작은 v1 profile을 사용합니다. 다른 profile이나 명시적 provider를 사용하려면 [일반 CLI](running.md)를 실행합니다.
+
+터미널에서도 `.venv/Scripts/python.exe scripts/start.py`로 같은 준비·모델 선택 경로를 실행할 수 있습니다. macOS/Linux는 `.venv/bin/python scripts/start.py`를 사용합니다.
 
 ## 중단점과 변수
 
