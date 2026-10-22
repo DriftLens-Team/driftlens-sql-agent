@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import sqlite3
+import sys
 
 
 # 모델 호출이나 비밀값 로딩 없이, 저장소 안의 Git 제외 경로만 준비한다.
@@ -31,4 +32,4 @@ if not config.exists():
         json.dump(settings, stream, ensure_ascii=False, indent=2)
         stream.write("\n")
 
-print("Debug data ready: runs/local-debug (existing files preserved).")
+print("Debug data ready: runs/local-debug (existing files preserved).", file=sys.stderr)
