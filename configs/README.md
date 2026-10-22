@@ -29,7 +29,7 @@ python -m pip install -e .
 python -m driftlens_sql_agent --config configs/runtime.example.json --profile profiles/v1/profile.example.json --protocol-version v1
 ```
 
-CLI는 `.env`를 자동으로 읽지 않습니다. VS Code 디버깅 설정은 `.env`를 읽어 실행 환경에 전달하며, `runs/local-debug/runtime.json`을 사용합니다.
+일반 CLI는 `.env`를 자동으로 읽지 않습니다. F5와 `python scripts/start.py`는 `.env`와 실행 환경을 확인해 모델을 자동 선택합니다. `runs/local-debug/runtime.json`을 바탕으로 실행용 임시 설정을 만들며 기존 DB와 설정 파일은 보존합니다. 설치와 자동 선택 조건은 [빠른 시작](../README.ko.md)을 참고하세요.
 
 - [JSONL 입력과 실행 안내](../docs/running.md)
 - [VS Code 디버깅 안내](../docs/debugging.md)
