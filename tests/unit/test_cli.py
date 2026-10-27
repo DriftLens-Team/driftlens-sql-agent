@@ -42,7 +42,7 @@ class InstalledCliTests(unittest.TestCase):
 
     def test_unsupported_protocol_is_rejected(self):
         """지원하지 않는 프로토콜 버전의 시작을 거부하는지 확인한다."""
-        result = self.run_cli("--config", "x", "--profile", "y", "--protocol-version", "v2")
+        result = self.run_cli("--config", "x", "--profile", "y", "--protocol-version", "v3")
         self.assertEqual(result.returncode, 2)
         self.assertEqual(result.stdout, "")
         self.assertIn("invalid choice", result.stderr)

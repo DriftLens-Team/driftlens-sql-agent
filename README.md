@@ -4,6 +4,8 @@
 
 A bounded, read-only SQL agent that answers weekly large-order counts from SQLite. It supports the `orders` schema, integer cents, UTC weeks and one selected business profile. It does not perform drift detection; the benchmark adapter is separate.
 
+The opt-in [SemAlign agent/v2](docs/contracts/v2/README.md) also supports seven metrics, joins, historical weekly windows and nullable scalar results. The default remains v1. See the [v2 verification record](docs/contracts/v2/validation.md), including the limits of the real-model smoke test.
+
 ## Quick start
 
 ### 1. Install
