@@ -49,10 +49,12 @@ profile 예:
 {"request_id":"demo-1","request":"주간 평균 주문액은?","timestamp":"2025-01-13T01:00:00Z","concept_id":"sa_order_value_avg","window":{"start":"2025-01-06T00:00:00Z","end":"2025-01-13T00:00:00Z"},"as_of":"2025-01-13T00:00:00Z"}
 ```
 
-기간은 UTC 월요일 자정부터 다음 월요일 자정까지의 반열린 구간이며 `as_of=end`, 질문 시각은 end 이후다. SQL DB의 timestamp에는 시간대 접미사가 없으므로 문자열 비교에 `Z`를 그대로 붙이지 않는다. 호스트는 SQL용 날짜 경계를 별도 제공한다. snapshot 생성과 미래 행 제거는 호출자인 benchmark의 책임이다.
+기간은 UTC 월요일 자정부터 다음 월요일 자정까지의 반열린 구간이며 `as_of=end`, 질문 시각은 end 이후다. SQL DB의 timestamp에는 시간대 접미사가 없으므로 문자열 비교에 `Z`를 그대로 붙이지 않는다. 호스트는 검증한 요청에서만 SQL 매개변수 `:week_start`, `:week_end`, `:previous_start`를 날짜 형식으로 계산하고, 전주 이력 완전성 비교에 쓰는 `:history_start`는 전주 시작의 전체 `YYYY-MM-DDT00:00:00` timestamp로 제공한다. 해당 정각에 첫 주문이 있으면 이력이 불완전하다고 판단하지 않는다. snapshot 생성과 미래 행 제거는 호출자인 benchmark의 책임이다.
+
+모델은 매개변수를 사용하는 SQL을 생성하고 호스트가 SQLite에 바인딩한다. 관측에는 SQLite trace에서 얻은 **실제 실행된 확장 SQL**을 기록해 benchmark가 같은 SQL을 다시 검사할 수 있게 한다. literal 날짜 SQL도 호환되지만 `Z`·offset이 붙은 timestamp literal과 SQL `ROUND`는 명시적으로 거부하고 기존 수정 예산 안에서 재생성을 요청한다. 호스트가 잘못된 SQL을 정답 쿼리로 교체하지 않는다.
 
 성공 응답은 기존 JSONL 봉투의 `observation`에 `request`, `answer`, `sql`, `reported_values`, `definition_note`를 담는다. reported_values는 개념·단위·window·as_of와 하나의 값이다. `count`는 0 이상의 signed 64-bit 정수, `cents`는 Python ties-to-even 반올림 정수, `ratio`는 소수 4자리 보고값, 계산 불가는 null이다. SQL 오류를 null로 변환하지 않는다. 결과 숫자는 유한해야 한다.
 
-답변은 `결과는 123 cents입니다.` 또는 null일 때 `계산할 수 없습니다.` 형식을 검증한다. definition_note는 선택된 profile의 definition을 호스트가 기록하며 출처는 `profile_rendered`다. 자유 형식 모델 설명의 품질을 측정하는 경로는 아니다. SQLite SELECT/WITH와 개념별 허용 테이블·함수만 실행하며 다중 문장·쓰기·재귀 CTE는 거부한다.
+답변은 `결과는 123 cents입니다.` 또는 null일 때 `계산할 수 없습니다.` 형식을 검증한다. definition_note는 선택된 profile의 definition을 호스트가 기록하며 출처는 `profile_rendered`다. 자유 형식 모델 설명의 품질을 측정하는 경로는 아니다. SQLite SELECT/WITH와 개념별 허용 테이블·함수만 실행하며 다중 문장·쓰기·재귀 CTE는 거부한다. 비율은 실수 나눗셈, 세금 0은 0, 빈 주·분모 0은 현재 의미 명세의 null 규칙을 적용하도록 안내한다. 실행 성공만으로 이러한 의미가 자동 검증되는 것은 아니다.
 
 값·답변이 실행 결과와 맞아도 SQL의 업무 의미가 맞다는 보장은 없다. 기계 판독 계약은 benchmark의 `contracts/agent/v2`와 `contracts/records/v3`를 참조하고, [검증 기록](validation.md)의 제한을 함께 적용한다. v1에 자동 강등하거나 v1 설정을 v2로 추측 변환하지 않는다.

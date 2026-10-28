@@ -45,13 +45,26 @@ def _authorize(action, arg1, arg2, database, source):
     return sqlite3.SQLITE_DENY
 
 
-def query(path, sql, budgets: Budgets, *, deadline: float, protocol="v1", concept_id=None):
+def query(path, sql, budgets: Budgets, *, deadline: float, protocol="v1", concept_id=None, parameters=None):
     """SQL의 읽기 권한·실행 비용·결과 크기를 제한하고 결과를 반환한다."""
     if time.monotonic() >= deadline:
         raise AgentError("request_timeout")
     prefix = r"\s*(?:SELECT|WITH)\b" if protocol == "v2" else r"\s*SELECT\b"
     if type(sql) is not str or len(sql) > budgets.sql_max_chars or not re.match(prefix, sql, re.I):
         raise AgentError("sql_error")
+    if protocol == "v2":
+        # Lex string literals separately from comments/quoted identifiers. SQLite
+        # compares naive timestamp text lexically, so a UTC suffix can drop midnight rows.
+        literals = re.findall(r"'(?:''|[^'])*'|\"(?:\"\"|[^\"])*\"|`(?:``|[^`])*`|\[[^\]]*\]|--[^\n]*|/\*[\s\S]*?\*/", sql)
+        if any(re.fullmatch(r"'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})'", token, re.I)
+               for token in literals):
+            raise AgentError("sql_error")
+        if parameters is not None and (type(parameters) is not dict
+                or set(parameters) != {"week_start", "week_end", "previous_start", "history_start"}
+                or any(type(value) is not str or not re.fullmatch(
+                    r"\d{4}-\d{2}-\d{2}T00:00:00" if key == "history_start" else r"\d{4}-\d{2}-\d{2}", value)
+                       for key, value in parameters.items())):
+            raise AgentError("sql_error")
     stop = min(deadline, time.monotonic() + budgets.sql_timeout_seconds)
     steps = 0
     step_interval = min(100, budgets.sql_vm_steps)
@@ -73,7 +86,7 @@ def query(path, sql, budgets: Budgets, *, deadline: float, protocol="v1", concep
         if (action == sqlite3.SQLITE_READ and database in ("main", None)
                 and arg1 in allowed and arg2 in TABLES[arg1] | {""}):
             return sqlite3.SQLITE_OK
-        if action == sqlite3.SQLITE_FUNCTION and (arg2 or "").lower() in {"count", "sum", "avg", "min", "max", "date", "round", "nullif", "coalesce", "abs"}:
+        if action == sqlite3.SQLITE_FUNCTION and (arg2 or "").lower() in {"count", "sum", "avg", "min", "max", "date", "nullif", "coalesce", "abs"}:
             return sqlite3.SQLITE_OK
         # Recursive CTEs, writes, pragmas, extension functions and other DBs deny.
         return sqlite3.SQLITE_DENY
@@ -88,11 +101,19 @@ def query(path, sql, budgets: Budgets, *, deadline: float, protocol="v1", concep
             db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 65536)
             db.set_authorizer(authorize_v2 if protocol == "v2" else _authorize)
             db.set_progress_handler(progress, step_interval)
-            cursor = db.execute(sql)
+            executed = []
+            if protocol == "v2":
+                db.set_trace_callback(executed.append)
+            cursor = db.execute(sql, parameters or {})
             rows = cursor.fetchmany(budgets.sql_max_rows + 1)
             if time.monotonic() >= stop or len(rows) > budgets.sql_max_rows:
                 raise AgentError("sql_error")
-            return {"columns": [col[0] for col in cursor.description], "rows": rows}
+            result = {"columns": [col[0] for col in cursor.description], "rows": rows}
+            if protocol == "v2":
+                if len(executed) != 1 or len(executed[0]) > budgets.sql_max_chars:
+                    raise AgentError("sql_error")
+                result["executed_sql"] = executed[0]
+            return result
     except (sqlite3.Error, ValueError, OSError, UnicodeError):
         if time.monotonic() >= deadline:
             raise AgentError("request_timeout") from None

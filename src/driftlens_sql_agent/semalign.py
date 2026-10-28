@@ -40,7 +40,7 @@ class SemAlignProfile:
 
     def __post_init__(self):
         """Dataclass hook validates the only definition visible to this process."""
-        if (self.concept_id not in UNITS or self.unit != UNITS[self.concept_id]
+        if (type(self.concept_id) is not str or self.concept_id not in UNITS or self.unit != UNITS[self.concept_id]
                 or any(type(v) is not str or not v.strip() or len(v) > 4096 for v in (self.label, self.definition))
                 or type(self.semantics) is not dict or set(self.semantics) != SLOTS
                 or any(type(v) is not str or not v.strip() or len(v) > 256 for v in self.semantics.values())

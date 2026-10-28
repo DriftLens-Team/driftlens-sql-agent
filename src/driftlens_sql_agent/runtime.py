@@ -3,6 +3,7 @@
 from importlib.resources import files
 from decimal import Decimal
 from dataclasses import asdict
+from datetime import date, timedelta
 import json
 import multiprocessing
 import re
@@ -70,8 +71,16 @@ class Runtime:
             allowed = {"orders"}
             if request.concept_id in {"sa_food_orders", "sa_drink_orders"}:
                 allowed |= {"order_items", "products"}
+            # Bind values come only from the validated request, never from model SQL.
+            # They omit the UTC suffix because the source stores naive UTC strings.
+            sql_parameters = {"week_start": request.start, "week_end": request.end,
+                              "previous_start": str(date.fromisoformat(request.start) - timedelta(days=7))}
+            # Completeness compares timestamps, not a shorter date prefix: an
+            # order exactly at prior midnight must count as available history.
+            sql_parameters["history_start"] = sql_parameters["previous_start"] + "T00:00:00"
             context = {"question": request.question, "concept_id": request.concept_id,
                        "start": request.start, "end": request.end, "as_of": request.as_of,
+                       "sql_parameters": sql_parameters,
                        "definition": asdict(self.settings.profile),
                        "schema": {t: sorted(TABLES[t]) for t in sorted(allowed)}}
         else:
@@ -188,9 +197,12 @@ class Runtime:
                         # 새 SQL이 실패하더라도 과거 관측이 남지 않게 실행 전에 비운다.
                         observation = None
                         result = query(self.settings.db_path, action["sql"], budgets, deadline=deadline,
-                                       protocol=self.settings.protocol, concept_id=request.concept_id if v2 else None)
+                                       protocol=self.settings.protocol, concept_id=request.concept_id if v2 else None,
+                                       parameters=sql_parameters if v2 else None)
                         value = metric_value(result, self.settings.profile.unit) if v2 else count_value(result)
-                        observation = {"sql": action["sql"], "value": value}
+                        # SQLite's expansion records the query actually executed, with
+                        # host date parameters bound, while the model action stays in history.
+                        observation = {"sql": result["executed_sql"] if v2 else action["sql"], "value": value}
                         messages.append({"role": "user", "content": "SQL_RESULT:" + json.dumps({"value": value})})
                         emit("sql_succeeded")
                     else:
@@ -223,6 +235,12 @@ class Runtime:
                         raise
                     repairs += 1
                     messages.append({"role": "user", "content": "ACTION_ERROR:" + json.dumps(error.record())})
+                    if v2 and error.code == "sql_error":
+                        messages.append({"role": "user", "content":
+                            "SQL_REPAIR: Use :week_start, :week_end, :previous_start, :history_start from sql_parameters. "
+                            "Do not use timezone-suffixed timestamp literals or SQL ROUND; reporting happens in the host. "
+                            "For ratios use floating-point division (1.0 * numerator / NULLIF(denominator, 0)); "
+                            "zero numerator remains zero. Preserve the supplied definition and NULL policy."})
                     emit("action_repair", error.code)
         except AgentError as error:
             emit("request_finished", error.code)

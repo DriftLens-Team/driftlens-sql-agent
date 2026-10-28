@@ -10,6 +10,8 @@ import tempfile
 import time
 import unittest
 
+from test_core import ScriptedModel
+
 from driftlens_sql_agent.errors import AgentError
 from driftlens_sql_agent.runtime import Runtime
 from driftlens_sql_agent.semalign import SemAlignBudgets, SemAlignProfile, SemAlignRequest, metric_answer, metric_value
@@ -131,3 +133,83 @@ class SemAlignTests(unittest.TestCase):
         responses=[json.loads(line) for line in proc.stdout.splitlines()]
         self.assertEqual([r["status"] for r in responses],["ok","ok"])
         self.assertEqual([r["request_id"] for r in responses],["one","two"])
+
+    def test_bound_dates_record_executed_sql_and_keep_midnight_orders(self):
+        """Bind the host window and expose SQLite's executed SQL, including boundary orders."""
+        sql = "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= :week_start AND ordered_at < :week_end"
+        model = ScriptedModel([{"action":"query","sql":sql},
+                               {"action":"answer","answer_text":"결과는 200 cents입니다."}])
+        response = Runtime(self.settings, model).run(REQUEST)
+        self.assertEqual(response["status"], "ok", response)
+        observation = response["observation"]
+        self.assertEqual(observation["reported_values"][0]["value"], 200)
+        self.assertNotIn(":week_start", observation["sql"])
+        self.assertIn("ordered_at >= '2025-01-13'", observation["sql"])
+        self.assertIn("ordered_at < '2025-01-20'", observation["sql"])
+
+    def test_bad_datetime_and_rounding_are_repaired_before_answering(self):
+        """Reject known source-format/reporting hazards and retain only the repaired query."""
+        good = "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= :week_start AND ordered_at < :week_end"
+        bad_queries = [
+            "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= '2025-01-13T00:00:00Z' AND ordered_at < '2025-01-20T00:00:00Z'",
+            "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= '2025-01-13T00:00:00+00:00'",
+            "SELECT ROUND(AVG(subtotal_cents)) FROM orders WHERE ordered_at >= :week_start AND ordered_at < :week_end",
+        ]
+        for bad in bad_queries:
+            with self.subTest(sql=bad):
+                model = ScriptedModel([{"action":"query","sql":bad}, {"action":"query","sql":good},
+                                       {"action":"answer","answer_text":"결과는 200 cents입니다."}])
+                events = []
+                response = Runtime(self.settings, model).run(REQUEST, diagnostic=events.append)
+                self.assertEqual(response["status"], "ok", response)
+                self.assertNotIn("ROUND", response["observation"]["sql"])
+                self.assertNotIn("00:00:00Z", response["observation"]["sql"])
+                self.assertEqual(sum(e["stage"] == "action_repair" for e in events), 1)
+        # Text inside comments is not a timestamp operand and must not trip the guard.
+        result = query(self.db, "SELECT COUNT(*) FROM orders /* '2025-01-13T00:00:00Z' */",
+                       self.settings.budgets, deadline=time.monotonic()+5, protocol="v2", concept_id="sa_customers_active")
+        self.assertEqual(result["rows"], [(8,)])
+
+    def test_growth_completeness_uses_full_midnight_boundary(self):
+        """A first prior-week order exactly at midnight is complete, but later history is not."""
+        profile = replace(self.profile, concept_id="sa_revenue_growth_wow", unit="ratio",
+                          semantics={**self.slots, "unit":"ratio"})
+        settings = replace(self.settings, profile=profile)
+        request = {**REQUEST, "concept_id":profile.concept_id}
+        with sqlite3.connect(self.db) as db:
+            db.execute("DELETE FROM orders WHERE order_id='p0'")
+        db.close()
+        response = Runtime(settings).run(request)
+        self.assertEqual(response["status"], "ok", response)
+        self.assertEqual(response["observation"]["reported_values"][0]["value"], 1.5)
+        self.assertIn("'2025-01-06T00:00:00'", response["observation"]["sql"])
+        with sqlite3.connect(self.db) as db:
+            db.execute("UPDATE orders SET ordered_at='2025-01-06T00:00:01' WHERE order_id='p1'")
+        db.close()
+        response = Runtime(settings).run(request)
+        self.assertIsNone(response["observation"]["reported_values"][0]["value"])
+        with sqlite3.connect(self.db) as db:
+            db.execute("UPDATE orders SET ordered_at='2025-01-06T00:00:00' WHERE order_id='p1'")
+            db.execute("DELETE FROM orders WHERE ordered_at >= '2025-01-13'")
+        db.close()
+        response = Runtime(settings).run(request)
+        self.assertIsNone(response["observation"]["reported_values"][0]["value"])
+
+    def test_zero_tax_and_half_even_reporting(self):
+        """Zero numerator stays zero, and 2.5 cents is rounded once by the host to 2."""
+        profile = replace(self.profile, concept_id="sa_tax_rate_avg", unit="ratio",
+                          semantics={**self.slots, "unit":"ratio"})
+        with sqlite3.connect(self.db) as db:
+            db.execute("UPDATE orders SET tax_paid_cents=0, order_total_cents=subtotal_cents")
+        db.close()
+        response = Runtime(replace(self.settings, profile=profile)).run({**REQUEST,"concept_id":profile.concept_id})
+        self.assertEqual(response["observation"]["reported_values"][0]["value"], 0.0)
+        with sqlite3.connect(self.db) as db:
+            db.execute("DELETE FROM orders WHERE order_id NOT IN ('q1','q2')")
+            db.execute("UPDATE orders SET subtotal_cents=2, order_total_cents=2 WHERE order_id='q1'")
+            db.execute("UPDATE orders SET subtotal_cents=3, order_total_cents=3 WHERE order_id='q2'")
+        db.close()
+        response = Runtime(self.settings).run(REQUEST)
+        self.assertEqual(response["observation"]["reported_values"][0]["value"], 2)
+        with self.assertRaises(AgentError):
+            replace(self.profile, concept_id=[])
