@@ -37,3 +37,16 @@ benchmark의 검수 정책은 두 가지다. `structural`은 검수기와 탐지
 ```
 
 새 dataclass 검증 훅, CLI 진입점, 모델 교체 메서드는 호출 인터페이스에 필요하다. parse·값·답변 검증은 실행 경계와 서로 다른 검증 사례에서 재사용한다. benchmark 내부 모듈은 import하지 않는다. SQL 권한 제한은 유지하지만 OS 프로세스 격리는 제공하지 않는다.
+
+## 2026-10-29 날짜 리터럴 수정 검증
+
+pstack 검토에서 SQLite가 큰따옴표 날짜를 문자열로 실행하면 시간대 접미사 검사와 수정 피드백이 생략되는 오류를 확인했다. 주 시작 자정의 100센트 주문과 다음 날 300센트 주문을 사용한 재현에서 작은따옴표는 수정 후 평균 200센트를 반환했지만, 큰따옴표는 수정 없이 300센트를 반환했다.
+
+날짜 형태의 큰따옴표 토큰을 검사 SQL에서만 대괄호 식별자로 바꾸고, 같은 SQLite 연결에서 `EXPLAIN` 준비로 이름을 해석한다. 실제 식별자는 유지되고, 문자열로 처리되던 값은 `sql_error` 수정 피드백을 받는다. 실제 실행과 관측에는 원래 SQL을 사용한다. Python 3.11에서 없는 DQS 설정이나 SQLite opcode 형식에 의존하지 않는다. 미사용 CTE 내부 값처럼 SQLite가 이름을 해석하지 않는 부분은 전체 텍스트 금지 대상이 아니며, 이 제한은 계약에 명시했다.
+
+새 사례를 먼저 추가하자 기존 코드의 6개 subtest가 실패했다. 수정 후 변경하지 않은 원래 재현에서 두 따옴표 모두 수정 1회 후 200센트를 반환했다. 날짜 형태의 정상 열·별칭·CTE 이름, 주석, 시간대 없는 timestamp, 호스트 날짜 매개변수와 원래 SQL 기록도 확인했다. 전체 단위 테스트 60개와 wheel 빌드가 통과했다. 실제 모델 호출은 없었다.
+
+```powershell
+.venv/Scripts/python.exe -m unittest discover -s tests/unit -p test_semalign.py -v
+.venv/Scripts/python.exe -m unittest discover -s tests/unit -p "test_*.py" -v
+```

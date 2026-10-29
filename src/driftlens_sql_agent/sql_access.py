@@ -53,12 +53,17 @@ def query(path, sql, budgets: Budgets, *, deadline: float, protocol="v1", concep
     if type(sql) is not str or len(sql) > budgets.sql_max_chars or not re.match(prefix, sql, re.I):
         raise AgentError("sql_error")
     if protocol == "v2":
-        # Lex string literals separately from comments/quoted identifiers. SQLite
+        # Lex quoted tokens separately from comments. SQLite
         # compares naive timestamp text lexically, so a UTC suffix can drop midnight rows.
-        literals = re.findall(r"'(?:''|[^'])*'|\"(?:\"\"|[^\"])*\"|`(?:``|[^`])*`|\[[^\]]*\]|--[^\n]*|/\*[\s\S]*?\*/", sql)
-        if any(re.fullmatch(r"'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})'", token, re.I)
-               for token in literals):
+        timestamps = [token for token in re.finditer(
+            r"'(?:''|[^'])*'|\"(?:\"\"|[^\"])*\"|`(?:``|[^`])*`|\[[^\]]*\]|--[^\n]*|/\*[\s\S]*?\*/", sql)
+            if token[0][0] in {"'", '"'} and re.fullmatch(
+                r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})", token[0][1:-1], re.I)]
+        if any(token[0].startswith("'") for token in timestamps):
             raise AgentError("sql_error")
+        identifier_sql = sql
+        for token in reversed(timestamps):
+            identifier_sql = identifier_sql[:token.start()] + "[" + token[0][1:-1] + "]" + identifier_sql[token.end():]
         if parameters is not None and (type(parameters) is not dict
                 or set(parameters) != {"week_start", "week_end", "previous_start", "history_start"}
                 or any(type(value) is not str or not re.fullmatch(
@@ -101,6 +106,12 @@ def query(path, sql, budgets: Budgets, *, deadline: float, protocol="v1", concep
             db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 65536)
             db.set_authorizer(authorize_v2 if protocol == "v2" else _authorize)
             db.set_progress_handler(progress, step_interval)
+            if protocol == "v2" and identifier_sql != sql:
+                # Brackets preserve real identifiers but disable SQLite's double-quoted
+                # string fallback. Prepare only, including on Python 3.11 without setconfig.
+                db.execute("EXPLAIN " + identifier_sql, parameters or {}).close()
+                if time.monotonic() >= stop:
+                    raise AgentError("sql_error")
             executed = []
             if protocol == "v2":
                 db.set_trace_callback(executed.append)

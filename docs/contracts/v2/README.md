@@ -53,6 +53,8 @@ profile 예:
 
 모델은 매개변수를 사용하는 SQL을 생성하고 호스트가 SQLite에 바인딩한다. 관측에는 SQLite trace에서 얻은 **실제 실행된 확장 SQL**을 기록해 benchmark가 같은 SQL을 다시 검사할 수 있게 한다. literal 날짜 SQL도 호환되지만 `Z`·offset이 붙은 timestamp literal과 SQL `ROUND`는 명시적으로 거부하고 기존 수정 예산 안에서 재생성을 요청한다. 호스트가 잘못된 SQL을 정답 쿼리로 교체하지 않는다.
 
+SQLite가 시간대 접미사가 있는 큰따옴표 timestamp를 문자열로 해석하는 경우도 실행 전에 거부한다. 날짜처럼 생긴 정상 열·별칭과 주석은 유지하며, 검사 후에는 모델이 작성한 원래 SQL을 실행하고 기록한다. 이 검사는 SQLite의 이름 해석을 사용한다. SQLite가 이름을 해석하지 않는 미사용 CTE 내부의 큰따옴표 값까지 모두 금지하는 전체 텍스트 검사는 아니다.
+
 성공 응답은 기존 JSONL 봉투의 `observation`에 `request`, `answer`, `sql`, `reported_values`, `definition_note`를 담는다. reported_values는 개념·단위·window·as_of와 하나의 값이다. `count`는 0 이상의 signed 64-bit 정수, `cents`는 Python ties-to-even 반올림 정수, `ratio`는 소수 4자리 보고값, 계산 불가는 null이다. SQL 오류를 null로 변환하지 않는다. 결과 숫자는 유한해야 한다.
 
 답변은 `결과는 123 cents입니다.` 또는 null일 때 `계산할 수 없습니다.` 형식을 검증한다. definition_note는 선택된 profile의 definition을 호스트가 기록하며 출처는 `profile_rendered`다. 자유 형식 모델 설명의 품질을 측정하는 경로는 아니다. SQLite SELECT/WITH와 개념별 허용 테이블·함수만 실행하며 다중 문장·쓰기·재귀 CTE는 거부한다. 비율은 실수 나눗셈, 세금 0은 0, 빈 주·분모 0은 현재 의미 명세의 null 규칙을 적용하도록 안내한다. 실행 성공만으로 이러한 의미가 자동 검증되는 것은 아니다.
