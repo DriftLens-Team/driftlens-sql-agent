@@ -153,6 +153,12 @@ class SemAlignTests(unittest.TestCase):
         bad_queries = [
             "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= '2025-01-13T00:00:00Z' AND ordered_at < '2025-01-20T00:00:00Z'",
             "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= '2025-01-13T00:00:00+00:00'",
+            'SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= "2025-01-13T00:00:00Z" AND ordered_at < "2025-01-20T00:00:00Z"',
+            'SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= "2025-01-13T00:00:00+00:00"',
+            'SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= "2025-01-13 00:00:00.000-05:00"',
+            'SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= "2025-01-13t00:00:00z"',
+            'SELECT AVG(subtotal_cents) FROM orders WHERE 1 OR ordered_at >= "2025-01-13T00:00:00Z"',
+            'SELECT AVG(subtotal_cents) FROM orders ORDER BY "2025-01-13T00:00:00Z"',
             "SELECT ROUND(AVG(subtotal_cents)) FROM orders WHERE ordered_at >= :week_start AND ordered_at < :week_end",
         ]
         for bad in bad_queries:
@@ -164,11 +170,43 @@ class SemAlignTests(unittest.TestCase):
                 self.assertEqual(response["status"], "ok", response)
                 self.assertNotIn("ROUND", response["observation"]["sql"])
                 self.assertNotIn("00:00:00Z", response["observation"]["sql"])
+                self.assertEqual(response["observation"]["reported_values"][0]["value"], 200)
                 self.assertEqual(sum(e["stage"] == "action_repair" for e in events), 1)
         # Text inside comments is not a timestamp operand and must not trip the guard.
         result = query(self.db, "SELECT COUNT(*) FROM orders /* '2025-01-13T00:00:00Z' */",
                        self.settings.budgets, deadline=time.monotonic()+5, protocol="v2", concept_id="sa_customers_active")
         self.assertEqual(result["rows"], [(8,)])
+
+    def test_timestamp_quotes_preserve_identifiers_comments_and_naive_dates(self):
+        """Keep legitimate quoted names, comments and source-format bounds executable."""
+        parameters = {"week_start":"2025-01-13", "week_end":"2025-01-20",
+                      "previous_start":"2025-01-06", "history_start":"2025-01-06T00:00:00"}
+        bound = " WHERE ordered_at >= :week_start AND ordered_at < :week_end"
+        cases = [
+            'SELECT AVG("subtotal_cents") FROM "orders"' + bound,
+            'SELECT AVG(subtotal_cents) AS "2025-01-13T00:00:00Z" FROM orders' + bound,
+            'WITH amounts("2025-01-13T00:00:00Z") AS (SELECT subtotal_cents FROM orders' + bound
+            + ') SELECT AVG("2025-01-13T00:00:00Z") FROM amounts',
+            'WITH "2025-01-13T00:00:00Z" AS (SELECT subtotal_cents FROM orders' + bound
+            + ') SELECT AVG(subtotal_cents) FROM "2025-01-13T00:00:00Z"',
+            'SELECT AVG(subtotal_cents) AS "2025-01-13T00:00:00Z" FROM orders' + bound
+            + ' HAVING "2025-01-13T00:00:00Z" > 0 ORDER BY "2025-01-13T00:00:00Z"',
+            'WITH amounts("quoted""2025-01-13T00:00:00Z") AS (SELECT subtotal_cents FROM orders' + bound
+            + ') SELECT AVG("quoted""2025-01-13T00:00:00Z") FROM amounts',
+            "SELECT AVG(subtotal_cents) FROM orders" + bound + ' /* "2025-01-13T00:00:00Z" */',
+            "SELECT AVG(subtotal_cents) FROM orders" + bound + ' -- "2025-01-13T00:00:00Z"',
+            "SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= '2025-01-13T00:00:00' AND ordered_at < '2025-01-20T00:00:00'",
+            'SELECT AVG(subtotal_cents) FROM orders WHERE ordered_at >= "2025-01-13T00:00:00" AND ordered_at < "2025-01-20T00:00:00"',
+        ]
+        for sql in cases:
+            with self.subTest(sql=sql):
+                result = query(self.db, sql, self.settings.budgets, deadline=time.monotonic()+5,
+                               protocol="v2", concept_id=self.profile.concept_id, parameters=parameters)
+                self.assertEqual(result["rows"], [(200.0,)])
+                self.assertNotIn(":week_start", result["executed_sql"])
+                self.assertFalse(result["executed_sql"].startswith("EXPLAIN"))
+                if '"2025-01-13T00:00:00Z"' in sql:
+                    self.assertIn('"2025-01-13T00:00:00Z"', result["executed_sql"])
 
     def test_growth_completeness_uses_full_midnight_boundary(self):
         """A first prior-week order exactly at midnight is complete, but later history is not."""
