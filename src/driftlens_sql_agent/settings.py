@@ -54,6 +54,7 @@ class Settings:
     provider: str
     model_id: str | None = None
     api_key: str | None = field(default=None, repr=False)
+    protocol: str = "v1"
 
 
 MAPPING = {"table": "orders", "order_id": "order_id", "ordered_at": "ordered_at",
@@ -66,7 +67,7 @@ def _keys(obj, required, optional=()):
         raise ValueError
 
 
-def load_settings(config_path, profile_path, *, environ=None) -> Settings:
+def load_settings(config_path, profile_path, *, environ=None, protocol="v1") -> Settings:
     """시작 시 설정과 단일 profile을 검증하고 비밀값은 환경에서만 읽는다."""
     env = os.environ if environ is None else environ
     try:
@@ -74,13 +75,25 @@ def load_settings(config_path, profile_path, *, environ=None) -> Settings:
         # profile 하나만 읽는다. 미래 정의나 평가 정답을 설정으로 병합하지 않는다.
         config = strict_json(path.read_text(encoding="utf-8"))
         profile = strict_json(Path(profile_path).read_text(encoding="utf-8"))
-        _keys(config, {"database", "schema_mapping", "amount_unit", "model"}, {"budgets"})
-        _keys(profile, {"concept_id", "comparison", "threshold", "amount_unit"})
-        if (profile["concept_id"] != "large_orders" or profile["comparison"] != ">="
-                or profile["amount_unit"] != "integer_cents" or config["amount_unit"] != "integer_cents"
-                or config["schema_mapping"] != MAPPING):
+        budget_type = Budgets
+        if protocol == "v2":
+            from .semalign import SemAlignBudgets, SemAlignProfile
+            _keys(config, {"database", "schema_id", "model"}, {"budgets"})
+            _keys(profile, {"concept_id", "label", "definition", "unit", "semantics"})
+            if config["schema_id"] != "semalign/v1":
+                raise ValueError
+            selected = SemAlignProfile(**profile)
+            budget_type = SemAlignBudgets
+        elif protocol == "v1":
+            _keys(config, {"database", "schema_mapping", "amount_unit", "model"}, {"budgets"})
+            _keys(profile, {"concept_id", "comparison", "threshold", "amount_unit"})
+            if (profile["concept_id"] != "large_orders" or profile["comparison"] != ">="
+                    or profile["amount_unit"] != "integer_cents" or config["amount_unit"] != "integer_cents"
+                    or config["schema_mapping"] != MAPPING):
+                raise ValueError
+            selected = Profile(profile["threshold"])
+        else:
             raise ValueError
-        selected = Profile(profile["threshold"])
         database = config["database"]
         _keys(database, {"kind", "path", "read_only"})
         if (database["kind"] != "sqlite" or database["read_only"] is not True
@@ -104,6 +117,6 @@ def load_settings(config_path, profile_path, *, environ=None) -> Settings:
         api_key = env.get(model["api_key_env"]) if model["provider"] == "upstage" else None
         if model["provider"] == "upstage" and (not model_id or not model_id.strip() or not api_key or not api_key.strip()):
             raise ValueError
-        return Settings(db_path, selected, Budgets(**budget_values), model["provider"], model_id, api_key)
+        return Settings(db_path, selected, budget_type(**budget_values), model["provider"], model_id, api_key, protocol)
     except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError):
         raise AgentError("invalid_config") from None

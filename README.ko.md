@@ -1,5 +1,7 @@
 # DriftLens SQL Agent
 
+명시적으로 선택하는 [SemAlign agent/v2](docs/contracts/v2/README.md)는 7개 지표, JOIN·과거 이력·주간 기간과 null·비율 결과를 지원합니다. 기본값은 v1입니다. 실제 모델 소규모 검증에서 확인한 제한은 [v2 검증 기록](docs/contracts/v2/validation.md)에 정리했습니다.
+
 [English](README.md) | [한국어](README.ko.md)
 
 SQLite에서 주간 대형 주문 건수를 조회하는 읽기 전용 SQL 에이전트입니다. `orders` 스키마, 정수 센트, UTC 주간, 선택한 업무 정의 하나를 지원합니다. drift 탐지·채점과 실제 benchmark adapter는 별도 범위입니다.

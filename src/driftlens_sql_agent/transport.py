@@ -42,7 +42,11 @@ def serve(runtime, input_stream, output_stream, diagnostic):
                     raise ValueError
                 obj = strict_json(raw.decode("utf-8"))
                 try:
-                    Request.parse(obj)
+                    if getattr(runtime.settings, "protocol", "v1") == "v2":
+                        from .semalign import SemAlignRequest
+                        SemAlignRequest.parse(obj)
+                    else:
+                        Request.parse(obj)
                 except AgentError as error:
                     if error.code == "protocol_error":
                         raise ValueError from None

@@ -1,5 +1,7 @@
 # 아키텍처와 구현 상태
 
+SemAlign의 명시적 v2 모드는 [계약과 실행](contracts/v2/README.md), [검증 기록](contracts/v2/validation.md)을 따른다. 7개 지표와 null·비율·과거 이력 집계를 지원한다. 아래 이슈 #1과 C03 설명은 기본 v1 경로에 해당한다.
+
 이슈 #1의 4단계입니다. [검증 기록](verification.md)에서 실제 통과 여부를 확인합니다. [Python API 실행 안내](runtime-phase-3.md)와 [계약 v1](contracts/v1/README.md)을 참고하세요.
 
 | 모듈 | 구현 역할 |
